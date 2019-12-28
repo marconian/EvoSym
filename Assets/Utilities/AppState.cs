@@ -51,7 +51,7 @@ namespace Assets.Utilities
                 .Where(b => b.body != null && b.stats != null);
         }
 
-        public static bool ReachedHerbivoreLimit { get => Herbivores.Count() <= 100; }
+        public static bool ReachedHerbivoreLimit { get => Herbivores.Count() <= 150; }
         public static IEnumerable<(Body body, BodyStats stats)> Herbivores
         {
             get => Animals

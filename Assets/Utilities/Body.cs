@@ -42,8 +42,8 @@ public class Body : MonoBehaviour
     }
 
     public float AccelerationSpeed = 20f;
-    public float Drag = 1f;
-    public float RotationSpeed = 2f;
+    public float Drag = 3f;
+    public float RotationSpeed = .5f;
     public float MaxDistanceToEdge = 5f;
     public int HuntingTime = 10;
     public int PopulationLimit = 50;

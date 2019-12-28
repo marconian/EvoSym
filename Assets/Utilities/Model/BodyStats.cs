@@ -30,10 +30,10 @@ namespace Assets.Utilities.Model
         }
 
         public float UpdateTiming = 0.1f;
-        public float AgingSpeed = 0.002f;
-        public float FoodConsumptionSpeed = 0.001f;
-        public float OxygenConsumptionSpeed = 0.002f;
-        public float WaterConsumptionSpeed = 0.002f;
+        public float AgingSpeed = 0.008f;
+        public float FoodConsumptionSpeed = 0.008f;
+        public float OxygenConsumptionSpeed = 0.01f;
+        public float WaterConsumptionSpeed = 0.001f;
 
         private Body BodyRef { get; set; }
 
@@ -58,7 +58,7 @@ namespace Assets.Utilities.Model
         public float Sense { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSense); }
         public float Strength { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveStrength); }
 
-        public float TotalFood { get => EnergyStorage; }
+        public float TotalFood { get => EnergyStorage + 1f; }
         public float TotalWater { get => EnergyStorage; }
         public float TotalOxygen { get => EnergyStorage; }
 

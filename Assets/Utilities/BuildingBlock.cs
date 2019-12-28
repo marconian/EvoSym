@@ -137,7 +137,9 @@ namespace Assets.Utilities
                     SensoryType = c.obj.tag == "Animal" ? SensoryType.Animal : SensoryType.Plant
                 });
             IEnumerable<SensoryData> environment = found
-                .Where(c => c.obj.tag == "Mountain" || (hydrophobic && c.obj.tag == "Water"))
+                .Where(c => c.obj.tag == "Mountain" || 
+                    (hydrophobic && c.obj.tag == "Water") || 
+                    (!hydrophobic && c.obj.tag == "Ground" && body.TransformPoint(c.pos).y > AppState.WaterLevel))
                 .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {

@@ -67,7 +67,14 @@ public class UITemplateInfo : MonoBehaviour
             SelectedInfoPanel.SetActive(true);
 
             Body selected = AppState.Selected;
+            BodyTemplate template = AppState.BodyTemplates[selected.Template.Value];
+
             SelectedInfo.text =
+                $"Generation = {template.Generation:F0}\n" +
+                $"Diet = {template.Diet.ToString()}\n" +
+                $"Template:\n" +
+                string.Join("\n", template.Template.Select(t => $" - {t.Value.Name} [{t.Value.MutationChance}] {t.Value.Position}")) +
+                $"\n\n" +
                 $"Food = {selected.BodyStats.Food:N1} / {selected.BodyStats.TotalFood:N1}\n" +
                 $"Water = {selected.BodyStats.Water} / {selected.BodyStats.TotalWater:N1}\n" +
                 $"Oxygen = {selected.BodyStats.Oxygen} / {selected.BodyStats.TotalOxygen:N1}\n\n" +
