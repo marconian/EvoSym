@@ -16,30 +16,28 @@ namespace Assets.Utilities.Model
 
         public void Update(Vector3 position, IEnumerable<BuildingBlock> neighboreBlocks)
         {
-            Top = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.up);
-            Bottom = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.down);
-            Right = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.right);
-            Left = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.left);
-            Front = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.forward);
-            Back = neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.back);
-            FreeSides = new bool[]
+            Sides = new BuildingBlock[]
             {
-                Top == null,
-                Bottom == null,
-                Right == null,
-                Left == null,
-                Front == null,
-                Back == null
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.up),
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.down),
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.right),
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.left),
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.forward),
+                neighboreBlocks?.FirstOrDefault(r => r.transform.localPosition == position + Vector3.back)
             };
+            FreeSides = Sides
+                .Select(s => s == null)
+                .ToArray();
         }
 
-        public BuildingBlock Top { get; private set; }
-        public BuildingBlock Bottom { get; private set; }
-        public BuildingBlock Right { get; private set; }
-        public BuildingBlock Left { get; private set; }
-        public BuildingBlock Front { get; private set; }
-        public BuildingBlock Back { get; private set; }
+        public BuildingBlock Top { get => Sides[0]; }
+        public BuildingBlock Bottom { get => Sides[1]; }
+        public BuildingBlock Right { get => Sides[2]; }
+        public BuildingBlock Left { get => Sides[3]; }
+        public BuildingBlock Front { get => Sides[4]; }
+        public BuildingBlock Back { get => Sides[5]; }
 
+        public BuildingBlock[] Sides { get; private set; }
         public bool[] FreeSides { get; private set; }
 
         public bool HasFreeSides

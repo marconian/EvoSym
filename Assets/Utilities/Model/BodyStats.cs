@@ -22,8 +22,9 @@ namespace Assets.Utilities.Model
             Width = (_blockPositions.Max(v => v.x) + 1) - _blockPositions.Min(v => v.x);
             Height = (_blockPositions.Max(v => v.y) + 1) - _blockPositions.Min(v => v.y);
             Depth = (_blockPositions.Max(v => v.z) + 1) - _blockPositions.Min(v => v.z);
-            EnergyStorage = BodyRef.ActiveBlocks
-                .Sum(b => b.EnergyStorage * (1 - (0.1f * b.Sides.FreeSides.Count(s => !s))));
+
+            Efficiency = BodyRef.ActiveBlocks
+                .Sum(b => 0.01f * b.NeighboreBlocks.Count());
 
             StartCoroutine(HeartBeat());
         }
@@ -42,11 +43,13 @@ namespace Assets.Utilities.Model
 
 
         private Vector3[] _blockPositions { get => BodyRef.ActiveBlocks.Select(v => v.transform.localPosition).ToArray(); }
+        private float Efficiency { get; set; }
+
         public float Width { get; private set; }
         public float Height { get; private set; }
         public float Depth { get; private set; }
 
-        public float EnergyStorage { get; private set; }
+        public float EnergyStorage { get => BodyRef.ActiveBlocks.Sum(b => b.EnergyStorage); }
         public float OxygenAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveOxygen); }
         public float WaterAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveWater) + 2f; }
         public float FoodAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveFood) + 2f; }
@@ -55,9 +58,9 @@ namespace Assets.Utilities.Model
         public float Sense { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSense); }
         public float Strength { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveStrength); }
 
-        private float TotalFood { get => EnergyStorage; }
-        private float TotalWater { get => EnergyStorage; }
-        private float TotalOxygen { get => EnergyStorage; }
+        public float TotalFood { get => EnergyStorage; }
+        public float TotalWater { get => EnergyStorage; }
+        public float TotalOxygen { get => EnergyStorage; }
 
 
         private float _lifeSpanConstant = 1f;
@@ -73,10 +76,10 @@ namespace Assets.Utilities.Model
             get 
             {
                 // min time based on food reserves
-                float minTime = Mathf.CeilToInt(TotalFood / FoodConsumptionSpeed) * UpdateTiming;
+                float minTime = Mathf.CeilToInt(TotalFood / (FoodConsumptionSpeed - FoodConsumptionSpeed * Efficiency)) * UpdateTiming;
 
-                // 10% more time than food reserve allows, to force animal to eat some food
-                return minTime * 1.05f + UnityEngine.Random.Range(0f, 2f);
+                // 5% more time than food reserve allows, to force animal to eat some food
+                return minTime * 1.05f;
             }
         }
 
@@ -112,11 +115,11 @@ namespace Assets.Utilities.Model
                 if (_oxygen == Mathf.Infinity)
                     _oxygen = TotalOxygen;
 
-                _food -= FoodConsumptionSpeed;
-                //_water -= Energy * WaterConsumptionSpeed * UpdateTiming;
+                _food -= FoodConsumptionSpeed - FoodConsumptionSpeed * Efficiency;
+                //_water -= WaterConsumptionSpeed - WaterConsumptionSpeed * Efficiency;
 
                 if (InWater)
-                    _oxygen -= OxygenConsumptionSpeed;
+                    _oxygen -= OxygenConsumptionSpeed - OxygenConsumptionSpeed * Efficiency;
 
                 if (!InWater || OxygenAbsorbtion > 0)
                     Oxygen = 0.1f;

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using Utilities;
 
 namespace Assets.Utilities
 {
@@ -29,6 +30,8 @@ namespace Assets.Utilities
 
             Registry = new Dictionary<string, GameObject>();
         }
+
+        public static Body Selected { get; set; }
 
         public static int GenerationCount { get; set; }
         public static BodyTemplate DefaultTemplate { get; }
@@ -81,6 +84,27 @@ namespace Assets.Utilities
                     _maxDepth = filter.mesh.vertices.Min(v => v.y) + filter.gameObject.transform.position.y;
                 }
                 return _maxDepth.HasValue ? _maxDepth.Value : -100f;
+            }
+        }
+
+        public static float[] Borders
+        {
+            get
+            {
+                Transform terrain = GameObject.Find("Ground").transform;
+
+                float scaleX = terrain.lossyScale.x * 10;
+                float scaleZ = terrain.lossyScale.z * 10;
+
+                float xmin = terrain.position.x - scaleX / 2;
+                float zmin = terrain.position.z - scaleZ / 2;
+                float xmax = xmin + scaleX;
+                float zmax = zmin + scaleZ;
+
+                return new float[]
+                {
+                    xmin, zmin, xmax, zmax
+                };
             }
         }
 

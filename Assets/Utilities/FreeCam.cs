@@ -1,9 +1,11 @@
 ﻿
+using Assets.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using Utilities;
 
 /// <summary>
 /// A simple free camera to be added to a Unity game object.
@@ -57,43 +59,60 @@ public class FreeCam : MonoBehaviour
 
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
         {
-            transform.position = transform.position + (-transform.right * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (-transform.right * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
         {
-            transform.position = transform.position + (transform.right * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (transform.right * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
         {
-            transform.position = transform.position + (transform.forward * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (transform.forward * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
         {
-            transform.position = transform.position + (-transform.forward * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (-transform.forward * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.Q))
         {
-            transform.position = transform.position + (transform.up * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (transform.up * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.E))
         {
-            transform.position = transform.position + (-transform.up * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (-transform.up * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.R) || Input.GetKey(KeyCode.PageUp))
         {
-            transform.position = transform.position + (Vector3.up * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (Vector3.up * movementSpeed * Time.unscaledDeltaTime);
         }
 
         if (Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.PageDown))
         {
-            transform.position = transform.position + (-Vector3.up * movementSpeed * Time.deltaTime);
+            transform.position = transform.position + (-Vector3.up * movementSpeed * Time.unscaledDeltaTime);
         }
+
+        Vector3 position = transform.position;
+        float offset = 10f;
+        if (position.x < AppState.Borders[0] + offset)
+            position.x = AppState.Borders[0] + offset;
+        else if (position.x > AppState.Borders[2] - offset)
+            position.x = AppState.Borders[2] - offset;
+
+        if (position.z < AppState.Borders[1] + offset)
+            position.z = AppState.Borders[1] + offset;
+        else if (position.z > AppState.Borders[3] - offset)
+            position.z = AppState.Borders[3] - offset;
+
+        if (AppState.TryGetHeightAtPosition(transform.position, out float height) && transform.position.y < height + 10f)
+            position.y = height + 10f;
+
+        transform.position = position;
 
         if (looking)
         {

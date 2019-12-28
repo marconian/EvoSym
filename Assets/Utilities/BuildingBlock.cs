@@ -33,24 +33,26 @@ namespace Assets.Utilities
         private float _activeWater = 1f;
         public float ActiveFood { get => Food * _activeFood; }
         private float _activeFood = 1f;
-        public float ActiveSpeed { get => Speed * _activeSpeed; }
-        private float _activeSpeed = 0f;
         public float ActiveSight { get => Sight * _activeSight; }
         private float _activeSight = 1f;
         public float ActiveSense { get => Sense * _activeSense; }
         private float _activeSense = 1f;
         public float ActiveStrength { get => Strength * _activeStrength; }
         private float _activeStrength = 1f;
+        public float ActiveSpeed { 
+            get 
+            {
+                float active = _activeSpeed;
+                if (Speed > 0 && active == 0 && NeighboreBlocks.Any())
+                    active = NeighboreBlocks.Max(b => b._activeSpeed);
+
+                return Speed * active;
+            } 
+        }
+        public float _activeSpeed = 0f;
 
         public BoxCollider Collider { get => GetComponent<BoxCollider>(); }
         public Body BodyRef { get => GetComponentInParent<Body>(); }
-
-        private BuildingBlock[] NeighboreBlocks
-        {
-            get => BodyRef?.ActiveBlocks
-                .Where(b => b.transform.localPosition != transform.localPosition)
-                .ToArray();
-        }
 
         private BlockSides _blockSides;
         public BlockSides Sides
@@ -58,13 +60,17 @@ namespace Assets.Utilities
             get
             {
                 Vector3 position = transform.localPosition;
+                BuildingBlock[] neighbores = BodyRef?.ActiveBlocks
+                    .Where(b => b.transform.localPosition != transform.localPosition)
+                    .ToArray();
                 if (_blockSides == null)
-                    _blockSides = new BlockSides(position, NeighboreBlocks);
-                else _blockSides.Update(position, NeighboreBlocks);
+                    _blockSides = new BlockSides(position, neighbores);
+                else _blockSides.Update(position, neighbores);
 
                 return _blockSides;
             }
         }
+        public IEnumerable<BuildingBlock> NeighboreBlocks { get => Sides.Sides.Where(s => s != null); }
 
         private float DoSenseInterval = .5f;
         private IEnumerator DoSense()
@@ -155,8 +161,8 @@ namespace Assets.Utilities
         {
             if (other.tag == "Ground")
             {
-                if (Speed > 0)
-                    _activeSpeed = _activeSpeed < 1 ? _activeSpeed + 0.1f : 1;
+                if (Speed > 0 && _activeSpeed < 1f)
+                    _activeSpeed += 0.1f;
             }
         }
 

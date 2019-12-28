@@ -11,6 +11,10 @@ public class UITemplateInfo : MonoBehaviour
 
     public Text TemplateInfo;
     public Text AnimalInfo;
+    public Text SelectedInfo;
+    public GameObject SelectedInfoPanel;
+
+    private
 
     // Start is called before the first frame update
     void Start()
@@ -44,7 +48,6 @@ public class UITemplateInfo : MonoBehaviour
 
         TemplateInfo.text = string.Join("\n", texts);
 
-
         IEnumerable<string> animalTexts = AppState.Animals
             .Where(v => v.stats.IsAlive).Take(10)
             .Select(v => $"- f:{v.stats.Food:N1}; " +
@@ -54,5 +57,33 @@ public class UITemplateInfo : MonoBehaviour
             (v.body.Focus != null ? $"d:{v.body.Focus.Distance:F0}" : ""));
 
         AnimalInfo.text = string.Join("\n", animalTexts);
+
+        if (!AppState.Selected)
+        {
+            SelectedInfoPanel.SetActive(false);
+        }
+        else
+        {
+            SelectedInfoPanel.SetActive(true);
+
+            Body selected = AppState.Selected;
+            SelectedInfo.text =
+                $"Food = {selected.BodyStats.Food:N1} / {selected.BodyStats.TotalFood:N1}\n" +
+                $"Water = {selected.BodyStats.Water} / {selected.BodyStats.TotalWater:N1}\n" +
+                $"Oxygen = {selected.BodyStats.Oxygen} / {selected.BodyStats.TotalOxygen:N1}\n\n" +
+                $"Food Absorbtion = {selected.BodyStats.FoodAbsorbtion:N1}\n" +
+                $"Water Absorbtion = {selected.BodyStats.WaterAbsorbtion:N1}\n" +
+                $"Oxygen Absorbtion = {selected.BodyStats.OxygenAbsorbtion:N1}\n\n" +
+                $"In Water = {selected.BodyStats.InWater:N1}\n\n" +
+                $"Life Span = {selected.BodyStats.LifeSpan:N1}\n" +
+                $"Total Life Span = {selected.BodyStats.TotalLifeSpan:N1}\n\n" +
+                $"Child Count = {selected.BodyStats.ChildCount:F0}\n" +
+                $"Reproduction Rate = {selected.BodyStats.ReproductionRate:N1}\n\n" +
+                $"Energy Storage = {selected.BodyStats.EnergyStorage:N1}\n" +
+                $"Sense = {selected.BodyStats.Sense:N1}\n" +
+                $"Sight = {selected.BodyStats.Sight:N1}\n" +
+                $"Speed = {selected.BodyStats.Speed:N1}\n" +
+                $"Strength = {selected.BodyStats.Strength:N1}";
+        }
     }
 }

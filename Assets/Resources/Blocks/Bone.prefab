@@ -105,8 +105,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 140b608b8319d144bba7b227f7e481ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EnergyStorage: 1
-  EnergyConsumption: 0.001
+  EnergyStorage: 0
   Oxygen: 0
   Water: 0
   Food: 0

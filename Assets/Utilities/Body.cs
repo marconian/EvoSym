@@ -246,6 +246,14 @@ public class Body : MonoBehaviour
         Rigidbody.AddForce(force, ForceMode.Force);
     }
 
+    private void OnMouseOver()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            AppState.Selected = this;
+        }
+    }
+
     public void OnBlockCollision(BuildingBlock block, GameObject collider)
     {
         if (CanEat(collider))
@@ -340,7 +348,7 @@ public class Body : MonoBehaviour
             }
             BodyStats.ChildCount += 1;
 
-            yield return new WaitForSeconds(BodyStats.ReproductionRate);
+            yield return new WaitForSeconds(BodyStats.ReproductionRate + UnityEngine.Random.Range(0f, 2f));
         }
     }
 
