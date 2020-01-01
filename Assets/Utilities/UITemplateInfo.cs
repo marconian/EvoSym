@@ -22,39 +22,64 @@ public class UITemplateInfo : MonoBehaviour
 
     }
 
+    public Color defaultColor = Color.black;
+    public Color unimportantColor = Color.gray;
+    public Color titleColor = Color.black;
+    public Color warningColor = Color.yellow;
+    public Color dangerColor = Color.red;
+
+    private string Hex(Color color) => $"#{ColorUtility.ToHtmlStringRGBA(color)}";
+    private string State(float current, float total) =>
+        $"<color={Hex(current / total < .1f ? dangerColor : current / total < .3f ? warningColor : defaultColor)}>{current:N1}</color>";
+
     // Update is called once per frame
     void FixedUpdate()
     {
-        
-        IEnumerable<string> texts = AppState.BodyTemplates
+        var generations = AppState.BodyTemplates
             .Select((v, i) => (
                 template: v.Value,
-                population: AppState.Animals.Where(a => a.body.Template == v.Key && 
+                population: AppState.Animals.Where(a => a.body.Template == v.Key &&
                     a.stats.IsAlive).ToArray()
             ))
             .Where(v => v.population.Length > 0)
-            .OrderByDescending(v => v.population.Length)
-            .Select(v => $"gen {v.template.Generation} [{(int)v.template.Diet}]: " +
-                $"p={v.population.Length}; " +
-                $"c={v.template.Template.Count};\n" +
+            .OrderByDescending(v => v.population.Length);
+
+        IEnumerable<string> generationTexts = generations.Where(v => v.population.Length >= 5)
+            .Select(v =>
+                $"<color={Hex(defaultColor)}>" +
+                $"<b><color={Hex(titleColor)}> Generation {v.template.Generation} ({v.template.Diet.ToString()})</color></b>\n" +
+                $"  - Population = {v.population.Length}; " +
+                $"Size = {v.template.Template.Count}\n" +
                 $"  - e={v.population[0].stats.EnergyStorage:F1}; " +
                 $"sp={v.population[0].stats.Speed:F1}; " +
                 $"s0={v.population[0].stats.Sense:F1}; " +
                 $"s1={v.population[0].stats.Sight:F1}\n" +
-                $"  - f={(v.population.Sum(p => p.stats.Food != Mathf.Infinity ? p.stats.Food : 0f) / v.population.Length):F2}; " +
-                $"w={(v.population.Sum(p => p.stats.Water != Mathf.Infinity ? p.stats.Water : 0f) / v.population.Length):F2}; " +
-                $"o={(v.population.Sum(p => p.stats.Oxygen != Mathf.Infinity ? p.stats.Oxygen : 0f) / v.population.Length):F2}; " +
-                $"a={(v.population.Sum(p => p.stats.LifeSpan) / v.population.Length):F0}");
+                $"  - f={(State(v.population.Sum(p => p.stats.Food != Mathf.Infinity ? p.stats.Food : 0f) / v.population.Length, v.population[0].stats.TotalFood)):F2}; " +
+                $"o={(State(v.population.Sum(p => p.stats.Oxygen != Mathf.Infinity ? p.stats.Oxygen : 0f) / v.population.Length, v.population[0].stats.TotalOxygen)):F2}; " +
+                $"a={(v.population.Sum(p => p.stats.LifeSpan) / v.population.Length):F0}; " +
+                $"c={(v.template.ChildrenPerLifetime):F0}" +
+                $"</color>")
+            .Union(generations.Where(v => v.population.Length < 5)
+            .Select(v =>
+                $"<color={Hex(unimportantColor)}>" +
+                $"<b>Generation {v.template.Generation} ({v.template.Diet.ToString()})</b>\n" +
+                $"  - Population = {v.population.Length}; " +
+                $"Size = {v.template.Template.Count}" +
+                $"</color>"));
 
-        TemplateInfo.text = string.Join("\n", texts);
+        TemplateInfo.text = string.Join("\n", generationTexts);
 
         IEnumerable<string> animalTexts = AppState.Animals
-            .Where(v => v.stats.IsAlive).Take(10)
-            .Select(v => $"- f:{v.stats.Food:N1}; " +
-            $"w:{v.stats.Water:N1}; " +
-            $"o:{v.stats.Oxygen:N1}; " +
-            $"a:{v.stats.LifeSpan:F0}/{v.stats.TotalLifeSpan:F0}; " +
-            (v.body.Focus != null ? $"d:{v.body.Focus.Distance:F0}" : ""));
+            .Where(v => v.stats.IsAlive)
+            .OrderByDescending(v => v.stats.LifeSpan)
+            .Take(10)
+            .Select(v =>
+                $"<color={Hex(defaultColor)}>" +
+                $"- " +
+                $"<b><color={Hex(titleColor)}>Food</color></b> {State(v.stats.Food, v.stats.TotalFood)}; " +
+                $"<b><color={Hex(titleColor)}>O²</color></b> {State(v.stats.Oxygen, v.stats.TotalOxygen)}; " +
+                $"<b><color={Hex(titleColor)}>Age</color></b> {v.stats.LifeSpan:F0} of {v.stats.TotalLifeSpan:F0}" +
+                $"</color>");
 
         AnimalInfo.text = string.Join("\n", animalTexts);
 
@@ -68,29 +93,46 @@ public class UITemplateInfo : MonoBehaviour
 
             Body selected = AppState.Selected;
             BodyTemplate template = AppState.BodyTemplates[selected.Template.Value];
+            Vector3 velocity = selected.Rigidbody.velocity;
 
             SelectedInfo.text =
-                $"Generation = {template.Generation:F0}\n" +
-                $"Diet = {template.Diet.ToString()}\n" +
-                $"Template:\n" +
+                $"<color={Hex(defaultColor)}>" +
+                $"<b><color={Hex(titleColor)}>Generation</color></b> = {template.Generation:F0}\n" +
+                $"<b><color={Hex(titleColor)}>Diet</color></b> = {template.Diet.ToString()}\n" +
+                $"<b><color={Hex(titleColor)}>Template:</color></b>\n" +
                 string.Join("\n", template.Template.Select(t => $" - {t.Value.Name} [{t.Value.MutationChance}] {t.Value.Position}")) +
                 $"\n\n" +
-                $"Food = {selected.BodyStats.Food:N1} / {selected.BodyStats.TotalFood:N1}\n" +
-                $"Water = {selected.BodyStats.Water} / {selected.BodyStats.TotalWater:N1}\n" +
-                $"Oxygen = {selected.BodyStats.Oxygen} / {selected.BodyStats.TotalOxygen:N1}\n\n" +
-                $"Food Absorbtion = {selected.BodyStats.FoodAbsorbtion:N1}\n" +
-                $"Water Absorbtion = {selected.BodyStats.WaterAbsorbtion:N1}\n" +
-                $"Oxygen Absorbtion = {selected.BodyStats.OxygenAbsorbtion:N1}\n\n" +
-                $"In Water = {selected.BodyStats.InWater:N1}\n\n" +
-                $"Life Span = {selected.BodyStats.LifeSpan:N1}\n" +
-                $"Total Life Span = {selected.BodyStats.TotalLifeSpan:N1}\n\n" +
-                $"Child Count = {selected.BodyStats.ChildCount:F0}\n" +
-                $"Reproduction Rate = {selected.BodyStats.ReproductionRate:N1}\n\n" +
-                $"Energy Storage = {selected.BodyStats.EnergyStorage:N1}\n" +
-                $"Sense = {selected.BodyStats.Sense:N1}\n" +
-                $"Sight = {selected.BodyStats.Sight:N1}\n" +
-                $"Speed = {selected.BodyStats.Speed:N1}\n" +
-                $"Strength = {selected.BodyStats.Strength:N1}";
+                $"<b><color={Hex(titleColor)}>Food</color></b> = {State(selected.BodyStats.Food, selected.BodyStats.TotalFood)} / {selected.BodyStats.TotalFood:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Water</color></b> = {State(selected.BodyStats.Water, selected.BodyStats.TotalWater)} / {selected.BodyStats.TotalWater:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Oxygen</color></b> = {State(selected.BodyStats.Oxygen, selected.BodyStats.TotalOxygen)} / {selected.BodyStats.TotalOxygen:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>Food Absorbtion</color></b> = {selected.BodyStats.FoodAbsorbtion:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Water Absorbtion</color></b> = {selected.BodyStats.WaterAbsorbtion:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Oxygen Absorbtion</color></b> = {selected.BodyStats.OxygenAbsorbtion:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>Position</color></b> = {selected.transform.position:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Rotation</color></b> = {selected.transform.rotation.eulerAngles:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Velocity</color></b> = {selected.Rigidbody.velocity.magnitude:N1} [{selected.BodyStats.Speed}]\n" +
+                $"<b><color={Hex(titleColor)}>Drag</color></b> = {selected.BodyStats.Width:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Angular Velocity</color></b> = {selected.Rigidbody.angularVelocity.magnitude:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Angular Drag</color></b> = {selected.Rigidbody.angularDrag:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Center Of Mass</color></b> = {selected.Rigidbody.centerOfMass:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>In Water</color></b> = {selected.BodyStats.InWater:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>Life Span</color></b> = {selected.BodyStats.LifeSpan:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Total Life Span</color></b> = {selected.BodyStats.TotalLifeSpan:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>Child Count</color></b> = {selected.BodyStats.ChildCount:F0}\n" +
+                $"<b><color={Hex(titleColor)}>Reproduction Rate</color></b> = {selected.BodyStats.GestationPeriod:N1}\n" +
+                $"\n" +
+                $"<b><color={Hex(titleColor)}>Energy Storage</color></b> = {selected.BodyStats.EnergyStorage:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Sense</color></b> = {selected.BodyStats.Sense:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Sight</color></b> = {selected.BodyStats.Sight:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Speed</color></b> = {selected.BodyStats.Speed:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Strength</color></b> = {selected.BodyStats.Strength:N1}" +
+                $"</color>";
         }
+
     }
 }

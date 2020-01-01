@@ -92,9 +92,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 363ec23fa6afcfd4f8cbcd987adf25cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  AccelerationSpeed: 20
-  Drag: 3
+  AccelerationSpeed: 100
   RotationSpeed: 0.5
-  MaxDistanceToEdge: 5
+  AvoidObstacleSpeed: 5
+  ChildSpawningDistance: 10
   HuntingTime: 10
   PopulationLimit: 50

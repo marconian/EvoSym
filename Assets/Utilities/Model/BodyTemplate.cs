@@ -18,11 +18,13 @@ namespace Assets.Utilities.Model
         public int Generation { get; }
         public BlockTemplateCollection Template { get; }
         public Diet Diet { get; set; }
+        public int ChildrenPerLifetime { get; set; } = 10;
 
         public float MutationChance { get; set; } = .05f;
         public float MutationNewTraitChance { get; set; } = .5f;
         public float MutationLoseTraitChance { get; set; } = .5f;
         public float MutationChangeDietChance { get; set; } = .5f;
+        public float MutationChangeChildrenChance { get; set; } = .5f;
 
         public bool TryMutate(out System.Guid key)
         {
@@ -39,8 +41,20 @@ namespace Assets.Utilities.Model
                             Diet.Herbivore,
                             Diet.Carnivore
                             //Diet.Omnivore
-                        }.Where(d => d != Diet)) : Diet
+                        }.Where(d => d != Diet)) : Diet,
+                    ChildrenPerLifetime = ChildrenPerLifetime
                 };
+
+                bool changedChildren = false;
+                if (Random.value < MutationChangeChildrenChance)
+                {
+                    int children = ChildrenPerLifetime + Mathf.RoundToInt(Random.Range(-1.49f, 1.49f));
+                    if (children != ChildrenPerLifetime && children >= 1 && children <= 20)
+                    {
+                        mutatedTemplate.ChildrenPerLifetime = children;
+                        changedChildren = true;
+                    }
+                }
 
                 foreach (BlockTemplate block in Template.Values)
                     mutatedTemplate.Template.Add(block.Name, block.Position, block.Rotation, block.MutationChance * .95f);
@@ -69,7 +83,7 @@ namespace Assets.Utilities.Model
                     }
                 }
 
-                if (hasMutation || changedDiet)
+                if (hasMutation || changedDiet || changedChildren)
                 {
                     AppState.BodyTemplates.Add(key, mutatedTemplate);
                     Debug.Log("Mutation occured!");

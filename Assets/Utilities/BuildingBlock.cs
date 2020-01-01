@@ -123,7 +123,9 @@ namespace Assets.Utilities
             (Collider obj, Vector3 pos, float dist)[] found = GatherSensoryData(distance, view);
 
             Transform body = BodyRef.transform;
-            bool hydrophobic = BodyRef.BodyStats.OxygenAbsorbtion == 0;
+            bool hydrophobic = BodyRef.BodyStats.Hydrophobic;
+            bool underwater = BodyRef.BodyStats.InWater;
+            float height = BodyRef.transform.position.y;
 
             IEnumerable<SensoryData> objects = found
                 .Where(c => AppState.Registry.ContainsKey(c.obj.name))
@@ -136,10 +138,8 @@ namespace Assets.Utilities
                     Distance = c.dist,
                     SensoryType = c.obj.tag == "Animal" ? SensoryType.Animal : SensoryType.Plant
                 });
-            IEnumerable<SensoryData> environment = found
-                .Where(c => c.obj.tag == "Mountain" || 
-                    (hydrophobic && c.obj.tag == "Water") || 
-                    (!hydrophobic && c.obj.tag == "Ground" && body.TransformPoint(c.pos).y > AppState.WaterLevel))
+            IEnumerable<SensoryData> edge = found
+                .Where(c => c.obj.tag == "Mountain")
                 .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {
@@ -148,8 +148,37 @@ namespace Assets.Utilities
                     Distance = c.dist,
                     SensoryType = SensoryType.Environment
                 });
+            IEnumerable<SensoryData> water = found
+                .Where(c => hydrophobic && !underwater && c.obj.tag == "Water")
+                .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
+                .Select(c => new SensoryData(body)
+                {
+                    Subject = c.obj,
+                    Position = c.pos,
+                    Distance = c.dist,
+                    SensoryType = SensoryType.Environment
+                });
+            IEnumerable<SensoryData> environment = found
+                .Where(c => c.obj.tag == "Ground" &&
+                    (hydrophobic && body.TransformPoint(c.pos).y < AppState.WaterLevel ||
+                    !hydrophobic && body.TransformPoint(c.pos).y > AppState.WaterLevel))
+                .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
+                .Select(c => new SensoryData(body)
+                {
+                    Subject = c.obj,
+                    Position = c.pos.y > 0 ?
+                        hydrophobic ? c.pos : -c.pos :
+                        hydrophobic ? -c.pos : c.pos,
+                    Distance = c.dist,
+                    SensoryType = SensoryType.Environment
+                });
 
-            SensoryData[] data = objects.Union(environment).ToArray();
+            SensoryData[] data = objects
+                .Union(edge)
+                .Union(water)
+                .Union(environment)
+                .ToArray();
+
             return data;
         }
 

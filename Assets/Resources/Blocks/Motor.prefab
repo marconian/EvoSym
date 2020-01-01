@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 1581776296784078258}
   m_Layer: 0
   m_Name: Motor
-  m_TagString: Untagged
+  m_TagString: Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -106,11 +106,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   EnergyStorage: 1
-  EnergyConsumption: 0.001
   Oxygen: 0
   Water: 0
   Food: 0
-  Speed: 5
+  Speed: 2
   Sight: 0
   Sense: 0
   Strength: 0
+  _activeSpeed: 0

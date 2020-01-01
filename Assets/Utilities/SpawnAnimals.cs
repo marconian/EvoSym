@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Utilities;
 using Assets.Utilities;
+using Assets.Utilities.Model;
 
 public class SpawnAnimals : MonoBehaviour
 {
@@ -59,7 +60,10 @@ public class SpawnAnimals : MonoBehaviour
 
     private void CreateAnimal()
     {
-        Vector3 position = Tools.RandomPosition(false);
+        System.Guid template = AppState.BodyTemplates.Keys.First();
+        bool hydrophobic = !AppState.BodyTemplates[template].Template.Any(b => b.Value.Name == "Membrane");
+
+        Vector3 position = Tools.RandomPosition(!hydrophobic);
         Quaternion rotation = Quaternion.Euler(0, Random.Range(0, 359), 0);
 
         GameObject objectTemplate = Resources.Load("AnimalBase") as GameObject;
@@ -67,7 +71,7 @@ public class SpawnAnimals : MonoBehaviour
         animal.name = System.Guid.NewGuid().ToString();
 
         if (animal.TryGetComponent(out Body animalBody))
-            animalBody.Template = AppState.BodyTemplates.Keys.First();
+            animalBody.Template = template;
 
         if (!AppState.Registry.ContainsKey(animal.name))
             AppState.Registry.Add(animal.name, animal);

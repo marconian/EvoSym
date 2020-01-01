@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 1581776296784078258}
   m_Layer: 0
   m_Name: Bone
-  m_TagString: Untagged
+  m_TagString: Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -113,3 +113,4 @@ MonoBehaviour:
   Sight: 0
   Sense: 0
   Strength: 10
+  _activeSpeed: 0

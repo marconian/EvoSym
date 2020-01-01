@@ -15,9 +15,18 @@ namespace Assets.Utilities
         {
             GenerationCount = 1;
 
-            DefaultTemplate = new BodyTemplate() { Diet = Diet.Herbivore };
+            DefaultTemplate = new BodyTemplate() { 
+                Diet = Diet.Herbivore,
+                ChildrenPerLifetime = 3
+            };
             DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
             DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
+
+            //DefaultTemplate = new BodyTemplate() { Diet = Diet.Carnivore };
+            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Membrane", new Vector3(1f, 0f, 0f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Membrane", new Vector3(1f, 0f, -1f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Fat", new Vector3(1f, 1f, 0f), Vector3.zero);
 
             BuildingBlocks = Resources.LoadAll("Blocks")
                 .OfType<GameObject>()
@@ -29,7 +38,11 @@ namespace Assets.Utilities
                 {{ Guid.NewGuid(), DefaultTemplate }};
 
             Registry = new Dictionary<string, GameObject>();
+            SenseCones = new List<GameObject>();
         }
+        public static bool Paused { get; set; }
+        public static bool SenseConesVisible { get; set; }
+        public static List<GameObject> SenseCones { get; }
 
         public static Body Selected { get; set; }
 
@@ -51,7 +64,7 @@ namespace Assets.Utilities
                 .Where(b => b.body != null && b.stats != null);
         }
 
-        public static bool ReachedHerbivoreLimit { get => Herbivores.Count() <= 150; }
+        public static bool ReachedHerbivoreLimit { get => Herbivores.Count() >= 150; }
         public static IEnumerable<(Body body, BodyStats stats)> Herbivores
         {
             get => Animals

@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class AppOptions : MonoBehaviour
 {
+    public static float DefaultTimeScale { get; set; }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -16,14 +18,24 @@ public class AppOptions : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.P))
             TogglePause();
+        if (Input.GetKeyDown(KeyCode.C))
+            ToggleSenseCones();
         if (Input.GetKeyDown(KeyCode.Escape))
             ClearSelected();
     }
 
     public void TogglePause()
     {
-        Paused = !Paused;
-        Time.timeScale = !Paused ? DefaultTimeScale : 0f;
+        AppState.Paused = !AppState.Paused;
+        Time.timeScale = !AppState.Paused ? DefaultTimeScale : 0f;
+    }
+
+    public void ToggleSenseCones()
+    {
+        AppState.SenseConesVisible = !AppState.SenseConesVisible;
+
+        foreach (GameObject cone in AppState.SenseCones)
+            cone.SetActive(AppState.SenseConesVisible);
     }
 
     public void ClearSelected()
@@ -31,7 +43,4 @@ public class AppOptions : MonoBehaviour
         if (AppState.Selected)
             AppState.Selected = null;
     }
-
-    public bool Paused { get; private set; }
-    public float DefaultTimeScale { get; private set; }
 }

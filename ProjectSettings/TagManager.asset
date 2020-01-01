@@ -17,6 +17,8 @@ TagManager:
   - Mountain
   - Ground
   - Water
+  - SenseCone
+  - Block
   layers:
   - Default
   - TransparentFX

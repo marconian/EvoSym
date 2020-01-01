@@ -41,10 +41,10 @@ public class Body : MonoBehaviour
         }
     }
 
-    public float AccelerationSpeed = 20f;
-    public float Drag = 3f;
+    public float AccelerationSpeed = 18f;
     public float RotationSpeed = .5f;
-    public float MaxDistanceToEdge = 5f;
+    public float AvoidObstacleSpeed = 15f;
+    public float ChildSpawningDistance = 10f;
     public int HuntingTime = 10;
     public int PopulationLimit = 50;
 
@@ -107,7 +107,8 @@ public class Body : MonoBehaviour
                 .Where(d => d.Distance < 20f);
             var environment = SensoryData.Values.SelectMany(v => v)
                 .Where(d => d.SensoryType == SensoryType.Environment && d.Subject != null)
-                .Where(d => d.Distance < 10f);
+                .Where(d => d.Distance < 15f)
+                .OrderBy(d => BodyStats.Hydrophobic ? d.Position.y : -d.Position.y);
 
             Dangers = preditors.Union(environment)
                 .ToArray();
@@ -141,8 +142,8 @@ public class Body : MonoBehaviour
         {
             Obstacles = SensoryData.Values.SelectMany(v => v)
                 .Where(d => d.Subject != null && AppState.Registry.ContainsKey(d.Subject.name))
-                .Where(d => d.Distance < 10f && !CanEat(d.Subject))
-                .Where(d => Mathf.Abs(Vector3.SignedAngle(Vector3.forward, d.Position, Vector3.up)) < 5f)
+                .Where(d => d.Distance < 20f && !CanEat(d.Subject))
+                .Where(d => Mathf.Abs(Vector3.SignedAngle(Vector3.forward, d.Position, Vector3.up)) < 90f)
                 .OrderBy(d => d.Distance)
                 .ToArray();
 
@@ -178,72 +179,57 @@ public class Body : MonoBehaviour
         SensoryData focus = Focus;
 
         if (dangers.Any())
-        {
-            SensoryData danger = dangers.OrderBy(d => d.Distance).First();
-            float distance = danger.Distance;
-
-            Vector3 position = transform.TransformPoint(danger.Position);
-            Vector3 direction = (position - transform.position).normalized;
-            direction.y = 0f;
-
-            Quaternion rotation = transform.rotation;
-            rotation.SetLookRotation(-direction, transform.up);
-
-            float rotationSpeed = RotationSpeed * .1f;
-            if (distance < 10f)
-                rotationSpeed = rotationSpeed * (10f - distance);
-
-            transform.rotation = Quaternion.Slerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime);
-
-            Debug.DrawRay(transform.position, direction * distance, Color.red, Time.fixedDeltaTime);
-        }
+            MoveFrom(dangers);
+        else if (obstacles.Any())
+            MoveFrom(obstacles);
         else if (focus?.Subject != null)
         {
-            float distance = focus.Distance;
-            if (distance < 3.5f)
+            if (focus.Distance < 3.5f)
                 Eat(focus.Subject);
             else
             {
-                Vector3 position = focus.Subject.transform.position;
-                Vector3 direction = (position - transform.position).normalized;
-                direction.y = 0f;
-
-                Quaternion rotation = transform.rotation;
-                rotation.SetLookRotation(direction, transform.up);
-
-                float rotationSpeed = RotationSpeed;
-                if (distance < 10f)
-                    rotationSpeed = rotationSpeed * (10f - distance);
-
-                transform.rotation = Quaternion.Slerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime);
-
+                MoveTo(focus);
                 StartCoroutine(Hunt());
-
-                Debug.DrawRay(transform.position, direction * distance, Color.blue, Time.fixedDeltaTime);
             }
         }
+            
 
-        //if (Obstacles.Any())
-        //{
-        //    SensoryData obstacle = obstacles.OrderBy(d => d.Distance).First();
-
-        //    Vector3 center = obstacle.Subject.transform.position;
-        //    transform.RotateAround(center, transform.forward, RotationSpeed * Time.deltaTime);
-        //}
-
-        float maxVelocity = BodyStats?.Speed ?? 0f;
-        if (maxVelocity > 0)
+        float velocity = Rigidbody.velocity.magnitude;
+        float maxVelocity = BodyStats.Speed;
+        if (maxVelocity > 0 && velocity < maxVelocity)
         {
-            Vector3 velocity = Rigidbody.velocity;
-            if (Mathf.Max(velocity.x, velocity.y, velocity.z) < maxVelocity)
-            {
-                Vector3 direction = transform.forward * AccelerationSpeed;
-                Rigidbody.AddForce(direction, ForceMode.Acceleration);
-            }
-        }
+            float acceleration = AccelerationSpeed * (1 - (Mathf.Sqrt(velocity / maxVelocity) + Mathf.Epsilon));
+            Vector3 direction = transform.forward * acceleration;
+            Rigidbody.AddForce(direction, ForceMode.Acceleration);
 
-        Vector3 force = -Drag * Rigidbody.velocity.normalized * Rigidbody.velocity.sqrMagnitude;
-        Rigidbody.AddForce(force, ForceMode.Force);
+            Vector3 dragForce = -BodyStats.Width * Rigidbody.velocity.normalized * Rigidbody.velocity.sqrMagnitude;
+            Rigidbody.AddForce(dragForce, ForceMode.Force);
+
+            Vector3 downwardForce = -transform.up.normalized * Rigidbody.velocity.sqrMagnitude;
+            Rigidbody.AddForce(downwardForce, ForceMode.Force);
+        }
+    }
+
+    private void MoveTo(SensoryData data) => Move(data, to: data.Subject.transform.position);
+    private void MoveFrom(SensoryData[] data) => Move(data.OrderBy(d => d.Distance).First(), .1f, -1f);
+    private void Move(SensoryData data, float speed = 1f, float offset = 1f, Vector3 to = default)
+    {
+        float distance = data.Distance;
+        Vector3 position = to != default ? to : transform.TransformPoint(data.Position);
+        Vector3 direction = (position - transform.position).normalized;
+        direction.y = 0f;
+
+        Quaternion rotation = transform.rotation;
+        rotation.SetLookRotation(direction * offset, transform.up);
+
+        float rotationSpeed = RotationSpeed * speed;
+        if (distance < 10f)
+            rotationSpeed = rotationSpeed * (10f - distance);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime);
+
+        Color rayColor = offset > 0f ? Color.blue : Color.red;
+        Debug.DrawRay(transform.position, direction * distance, rayColor, Time.fixedDeltaTime);
     }
 
     private void OnMouseOver()
@@ -309,25 +295,25 @@ public class Body : MonoBehaviour
     {
         while (BodyStats.IsAlive)
         {
-            if (BodyStats.ChildCount > 0 && 
+            if (BodyStats.Reproduce && 
                 AppState.Animals.Where(a => a.body.Template == Template).Count() <= PopulationLimit &&
-                (AppState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || AppState.ReachedHerbivoreLimit))
+                (AppState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || !AppState.ReachedHerbivoreLimit))
             {
-                float r = 30;
+                float r = ChildSpawningDistance;
                 float x = Random.Range(-r, r);
                 float z = Random.Range(-r, r);
 
-                if (BodyStats.OxygenAbsorbtion == 0)
-                {
-                    int i = 0;
-                    while (AppState.WaterAtPosition(x, z))
-                    {
-                        x = Random.Range(-r, r);
-                        z = Random.Range(-r, r);
+                bool inwater = BodyStats.InWater;
 
-                        i++;
-                        if (i == 100) break;
-                    }
+                int i = 0;
+                while (BodyStats.Hydrophobic ? inwater : !inwater)
+                {
+                    x = Random.Range(-r, r);
+                    z = Random.Range(-r, r);
+                    inwater = AppState.WaterAtPosition(x, z);
+
+                    i++;
+                    if (i == 100) break;
                 }
 
                 Vector3 position = transform.TransformPoint(new Vector3(x, 0f, z));
@@ -345,10 +331,10 @@ public class Body : MonoBehaviour
                     AppState.Registry.Add(child.name, child);
 
                 Debug.Log("A child is born");
+                BodyStats.ChildCount += 1;
             }
-            BodyStats.ChildCount += 1;
 
-            yield return new WaitForSeconds(BodyStats.ReproductionRate + UnityEngine.Random.Range(0f, 2f));
+            yield return new WaitUntil(() => BodyStats.Reproduce);
         }
     }
 
@@ -385,10 +371,7 @@ public class Body : MonoBehaviour
         );
 
         Rigidbody.mass = 3; // BodyStats.Mass;
-        Rigidbody.centerOfMass = center + Vector3.back * .1f;
-
-        Rigidbody.drag = 0f; // Mathf.Sqrt(BodyStats.Width * BodyStats.Height);
-        //Rigidbody.angularDrag = 0f;
+        Rigidbody.centerOfMass = center + Vector3.back * 1f;
 
         Collider.size = new Vector3(BodyStats.Width, BodyStats.Height, BodyStats.Depth);
         Collider.center = center;
