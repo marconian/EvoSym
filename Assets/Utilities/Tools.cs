@@ -1,4 +1,5 @@
 ﻿
+using Assets.State;
 using Assets.Utilities;
 using System.Collections;
 using System.Collections.Generic;
@@ -38,7 +39,7 @@ namespace Utilities
                 if (!allowUnderWater)
                 {
                     int i = 0;
-                    while (AppState.WaterAtPosition(x, z))
+                    while (TerrainState.WaterAtPosition(x, z))
                     {
                         x = Random.Range(xmin + deadZone, xmax - deadZone);
                         z = Random.Range(zmin + deadZone, zmax - deadZone);
@@ -49,7 +50,7 @@ namespace Utilities
                 }
 
                 float y = 0f;
-                if (AppState.TryGetHeightAtPosition(x, z, out float height))
+                if (TerrainState.TryGetHeightAtPosition(x, z, out float height))
                     y = height;
 
                 Vector3 position = new Vector3(x, y, z);

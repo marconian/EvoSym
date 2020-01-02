@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Assets.State;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,8 +38,8 @@ namespace Assets.Utilities.Model
         private Body BodyRef { get; set; }
 
         public bool Awake { get; private set; }
-        public bool IsAlive { get => BodyRef != null && Food > 0 && Water > 0 && Oxygen > 0 && LifeSpan < TotalLifeSpan && transform.position.y > AppState.MaxDepth && transform.position.y < 100f; }
-        public bool InWater { get => BodyRef.transform.position.y < AppState.WaterLevel; }
+        public bool IsAlive { get => BodyRef != null && Food > 0 && Water > 0 && Oxygen > 0 && LifeSpan < TotalLifeSpan && transform.position.y > TerrainState.MaxDepth && transform.position.y < 100f; }
+        public bool InWater { get => BodyRef.transform.position.y < TerrainState.WaterLevel; }
 
         private Vector3[] _blockPositions { get => BodyRef.ActiveBlocks.Select(v => v.transform.localPosition).ToArray(); }
         private float Efficiency { get; set; }
@@ -82,7 +83,7 @@ namespace Assets.Utilities.Model
             get => _childCount;
             set
             {
-                int childrenPerLifetime = AppState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
+                int childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
                 GestationPeriod = (TotalLifeSpan - 1) / childrenPerLifetime + Random.Range(-.2f, .2f);
 
                 if (_childCount == 0)

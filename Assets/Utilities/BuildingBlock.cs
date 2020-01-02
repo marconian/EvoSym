@@ -1,4 +1,5 @@
-﻿using Assets.Utilities.Model;
+﻿using Assets.State;
+using Assets.Utilities.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -130,7 +131,7 @@ namespace Assets.Utilities
             IEnumerable<SensoryData> objects = found
                 .Where(c => AppState.Registry.ContainsKey(c.obj.name))
                 .Select(c => (obj: AppState.Registry[c.obj.name], c.pos, c.dist))
-                .Where(c => !hydrophobic || c.obj.transform.position.y > AppState.WaterLevel)
+                .Where(c => !hydrophobic || c.obj.transform.position.y > TerrainState.WaterLevel)
                 .Select(c => new SensoryData(body)
                 {
                     Subject = c.obj,
@@ -160,8 +161,8 @@ namespace Assets.Utilities
                 });
             IEnumerable<SensoryData> environment = found
                 .Where(c => c.obj.tag == "Ground" &&
-                    (hydrophobic && body.TransformPoint(c.pos).y < AppState.WaterLevel ||
-                    !hydrophobic && body.TransformPoint(c.pos).y > AppState.WaterLevel))
+                    (hydrophobic && body.TransformPoint(c.pos).y < TerrainState.WaterLevel ||
+                    !hydrophobic && body.TransformPoint(c.pos).y > TerrainState.WaterLevel))
                 .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {

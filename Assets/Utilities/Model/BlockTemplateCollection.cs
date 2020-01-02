@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Assets.State;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -75,7 +76,7 @@ namespace Assets.Utilities.Model
 
             if (!Values.Any(b => b.Position == position))
             {
-                Add(Tools.RandomElement(AppState.BuildingBlocks.Keys), position, Tools.RandomDirection());
+                Add(Tools.RandomElement(AnimalState.BuildingBlocks.Keys), position, Tools.RandomDirection());
                 return true;
             }
 

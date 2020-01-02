@@ -1,4 +1,5 @@
 ﻿
+using Assets.State;
 using Assets.Utilities;
 using System;
 using System.Collections.Generic;
@@ -99,17 +100,17 @@ public class FreeCam : MonoBehaviour
 
         Vector3 position = transform.position;
         float offset = 10f;
-        if (position.x < AppState.Borders[0] + offset)
-            position.x = AppState.Borders[0] + offset;
-        else if (position.x > AppState.Borders[2] - offset)
-            position.x = AppState.Borders[2] - offset;
+        if (position.x < TerrainState.Borders[0] + offset)
+            position.x = TerrainState.Borders[0] + offset;
+        else if (position.x > TerrainState.Borders[2] - offset)
+            position.x = TerrainState.Borders[2] - offset;
 
-        if (position.z < AppState.Borders[1] + offset)
-            position.z = AppState.Borders[1] + offset;
-        else if (position.z > AppState.Borders[3] - offset)
-            position.z = AppState.Borders[3] - offset;
+        if (position.z < TerrainState.Borders[1] + offset)
+            position.z = TerrainState.Borders[1] + offset;
+        else if (position.z > TerrainState.Borders[3] - offset)
+            position.z = TerrainState.Borders[3] - offset;
 
-        if (AppState.TryGetHeightAtPosition(transform.position, out float height) && transform.position.y < height + 10f)
+        if (TerrainState.TryGetHeightAtPosition(transform.position, out float height) && transform.position.y < height + 10f)
             position.y = height + 10f;
 
         transform.position = position;

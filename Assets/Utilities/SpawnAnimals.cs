@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Utilities;
 using Assets.Utilities;
 using Assets.Utilities.Model;
+using Assets.State;
 
 public class SpawnAnimals : MonoBehaviour
 {
@@ -23,12 +24,12 @@ public class SpawnAnimals : MonoBehaviour
     {
         while(true)
         {
-            System.Guid[] templates = AppState.BodyTemplates.Keys
+            System.Guid[] templates = AnimalState.BodyTemplates.Keys
                 .Skip(1)
-                .Where(t => AppState.BodyTemplates[t] != null)
-                .Take(AppState.BodyTemplates.Count - 10)
+                .Where(t => AnimalState.BodyTemplates[t] != null)
+                .Take(AnimalState.BodyTemplates.Count - 10)
                 .ToArray();
-            System.Guid[] activeTemplates = AppState.Animals
+            System.Guid[] activeTemplates = AnimalState.Animals
                 .Where(a => a.body.Template.HasValue)
                 .Select(a => a.body.Template.Value)
                 .Distinct()
@@ -37,7 +38,7 @@ public class SpawnAnimals : MonoBehaviour
             foreach(System.Guid template in templates)
             {
                 if (!activeTemplates.Contains(template))
-                    AppState.BodyTemplates.Remove(template);
+                    AnimalState.BodyTemplates.Remove(template);
             }
 
             yield return new WaitForSeconds(60f);
@@ -60,8 +61,8 @@ public class SpawnAnimals : MonoBehaviour
 
     private void CreateAnimal()
     {
-        System.Guid template = AppState.BodyTemplates.Keys.First();
-        bool hydrophobic = !AppState.BodyTemplates[template].Template.Any(b => b.Value.Name == "Membrane");
+        System.Guid template = AnimalState.BodyTemplates.Keys.First();
+        bool hydrophobic = !AnimalState.BodyTemplates[template].Template.Any(b => b.Value.Name == "Membrane");
 
         Vector3 position = Tools.RandomPosition(!hydrophobic);
         Quaternion rotation = Quaternion.Euler(0, Random.Range(0, 359), 0);

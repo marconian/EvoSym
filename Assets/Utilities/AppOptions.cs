@@ -1,4 +1,5 @@
-﻿using Assets.Utilities;
+﻿using Assets.State;
+using Assets.Utilities;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -34,7 +35,7 @@ public class AppOptions : MonoBehaviour
     {
         AppState.SenseConesVisible = !AppState.SenseConesVisible;
 
-        foreach (GameObject cone in AppState.SenseCones)
+        foreach (GameObject cone in AnimalState.SenseCones)
             cone.SetActive(AppState.SenseConesVisible);
     }
 

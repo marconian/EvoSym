@@ -1,4 +1,5 @@
-﻿using Assets.Utilities;
+﻿using Assets.State;
+using Assets.Utilities;
 using Assets.Utilities.Model;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,10 +28,10 @@ public class Body : MonoBehaviour
             Rigidbody = GetComponent<Rigidbody>();
             Collider = GetComponent<BoxCollider>();
 
-            if (AppState.BodyTemplates[Template.Value].TryMutate(out System.Guid template))
+            if (AnimalState.BodyTemplates[Template.Value].TryMutate(out System.Guid template))
                 Template = template;
 
-            BuildTemplate(AppState.BodyTemplates[Template.Value]);
+            BuildTemplate(AnimalState.BodyTemplates[Template.Value]);
 
             StartCoroutine(Breathe());
         }
@@ -47,6 +48,7 @@ public class Body : MonoBehaviour
     public float ChildSpawningDistance = 10f;
     public int HuntingTime = 10;
     public int PopulationLimit = 50;
+    public float HorizontalRotationLimit = 10f;
 
     public System.Guid? Template { get; set; }
 
@@ -156,7 +158,7 @@ public class Body : MonoBehaviour
         if (AppState.Registry.ContainsKey(obj.name))
         {
             bool isAnimal = obj.TryGetComponent(out Body body);
-            switch (AppState.BodyTemplates[Template.Value].Diet)
+            switch (AnimalState.BodyTemplates[Template.Value].Diet)
             {
                 case Diet.Herbivore:
                     return !isAnimal;
@@ -192,7 +194,6 @@ public class Body : MonoBehaviour
                 StartCoroutine(Hunt());
             }
         }
-            
 
         float velocity = Rigidbody.velocity.magnitude;
         float maxVelocity = BodyStats.Speed;
@@ -208,6 +209,26 @@ public class Body : MonoBehaviour
             Vector3 downwardForce = -transform.up.normalized * Rigidbody.velocity.sqrMagnitude;
             Rigidbody.AddForce(downwardForce, ForceMode.Force);
         }
+
+        LockRotation(HorizontalRotationLimit);
+    }
+
+    private void LockRotation(float angle)
+    {
+        float lower = angle % 360;
+        float upper = (360 - angle) % 360;
+
+        Vector3 angles = transform.rotation.eulerAngles;
+
+        if (angles.x > 180f && angles.x < upper)
+            angles.x = upper;
+        else if (angles.x < 180f && angles.x > lower)
+            angles.x = lower;
+
+        if (angles.z > 180f && angles.z < upper)
+            angles.z = upper;
+        else if (angles.z < 180f && angles.z > lower)
+            angles.z = lower;
     }
 
     private void MoveTo(SensoryData data) => Move(data, to: data.Subject.transform.position);
@@ -295,9 +316,9 @@ public class Body : MonoBehaviour
     {
         while (BodyStats.IsAlive)
         {
-            if (BodyStats.Reproduce && 
-                AppState.Animals.Where(a => a.body.Template == Template).Count() <= PopulationLimit &&
-                (AppState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || !AppState.ReachedHerbivoreLimit))
+            if (BodyStats.Reproduce &&
+                AnimalState.Animals.Where(a => a.body.Template == Template).Count() <= PopulationLimit &&
+                (AnimalState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || !AnimalState.ReachedHerbivoreLimit))
             {
                 float r = ChildSpawningDistance;
                 float x = Random.Range(-r, r);
@@ -310,14 +331,14 @@ public class Body : MonoBehaviour
                 {
                     x = Random.Range(-r, r);
                     z = Random.Range(-r, r);
-                    inwater = AppState.WaterAtPosition(x, z);
+                    inwater = TerrainState.WaterAtPosition(x, z);
 
                     i++;
                     if (i == 100) break;
                 }
 
                 Vector3 position = transform.TransformPoint(new Vector3(x, 0f, z));
-                if (AppState.TryGetHeightAtPosition(position, out float y))
+                if (TerrainState.TryGetHeightAtPosition(position, out float y))
                     position.y = y;
 
                 GameObject objectTemplate = Resources.Load("AnimalBase") as GameObject;
@@ -347,7 +368,7 @@ public class Body : MonoBehaviour
     private void UpdatePosition()
     {
         Vector3 position = transform.position;
-        if (AppState.TryGetHeightAtPosition(position, out float y))
+        if (TerrainState.TryGetHeightAtPosition(position, out float y))
             position.y = y + 1f;
 
         transform.position = position;
@@ -379,9 +400,9 @@ public class Body : MonoBehaviour
 
     private BuildingBlock CreateBlock(string name, Vector3 position, Vector3 direction)
     {
-        if (AppState.BuildingBlocks.ContainsKey(name))
+        if (AnimalState.BuildingBlocks.ContainsKey(name))
         {
-            GameObject gameObject = Instantiate(AppState.BuildingBlocks[name].gameObject, transform.TransformPoint(position), transform.rotation, transform);
+            GameObject gameObject = Instantiate(AnimalState.BuildingBlocks[name].gameObject, transform.TransformPoint(position), transform.rotation, transform);
             gameObject.transform.localPosition = position;
             gameObject.transform.localRotation = Quaternion.Euler(direction);
             gameObject.name = name;

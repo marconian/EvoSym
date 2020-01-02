@@ -1,4 +1,5 @@
-﻿using Assets.Utilities.Model;
+﻿using Assets.State;
+using Assets.Utilities.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,7 +30,7 @@ namespace Assets.Utilities
                     filter.sharedMesh = mesh;
             }
 
-            if (BodyRef != null && AppState.BodyTemplates[BodyRef.Template.Value].Diet == Diet.Carnivore)
+            if (BodyRef != null && AnimalState.BodyTemplates[BodyRef.Template.Value].Diet == Diet.Carnivore)
             {
                 var resource = Resources.Load("Blocks/Materials/SenseConeCarnivore");
                 if (TryGetComponent(out MeshRenderer renderer) && resource is Material material)
@@ -38,12 +39,12 @@ namespace Assets.Utilities
             
 
             gameObject.SetActive(AppState.SenseConesVisible);
-            AppState.SenseCones.Add(gameObject);
+            AnimalState.SenseCones.Add(gameObject);
         }
 
         private void OnDestroy()
         {
-            AppState.SenseCones.Remove(gameObject);
+            AnimalState.SenseCones.Remove(gameObject);
         }
 
         public Mesh GetSensoryfieldCone(float distance, float view = 180f)

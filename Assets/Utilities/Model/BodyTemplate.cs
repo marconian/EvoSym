@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Assets.State;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace Assets.Utilities.Model
     {
         public BodyTemplate()
         {
-            Generation = AppState.GenerationCount++;
+            Generation = AnimalState.GenerationCount++;
             Template = new BlockTemplateCollection(this);
         }
 
@@ -77,7 +78,7 @@ namespace Assets.Utilities.Model
 
                         if (isEssential || Random.value > MutationLoseTraitChance)
                         {
-                            mutatedTemplate.Template.Add(Tools.RandomElement(AppState.BuildingBlocks.Keys), position, Tools.RandomDirection());
+                            mutatedTemplate.Template.Add(Tools.RandomElement(AnimalState.BuildingBlocks.Keys), position, Tools.RandomDirection());
                             hasMutation = true;
                         }
                     }
@@ -85,7 +86,7 @@ namespace Assets.Utilities.Model
 
                 if (hasMutation || changedDiet || changedChildren)
                 {
-                    AppState.BodyTemplates.Add(key, mutatedTemplate);
+                    AnimalState.BodyTemplates.Add(key, mutatedTemplate);
                     Debug.Log("Mutation occured!");
 
                     return true;

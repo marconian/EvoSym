@@ -4,18 +4,10 @@ using System.Linq;
 using System.Collections.Generic;
 using Utilities;
 using Assets.Utilities;
+using Assets.State;
 
 public class SpawnTrees : MonoBehaviour
 {
-    private IEnumerable<(FoliageType tag, GameObject obj)> FoliageCollection
-    {
-        get => Resources.LoadAll("Foliage")
-            .OfType<GameObject>()
-            .Select(f => (
-                System.Enum.TryParse(f.name.Split('_')[0], out FoliageType t) ? t : FoliageType.Other, 
-                f
-            ));
-    }
 
     private GameObject Ground { get => GameObject.Find("Ground"); }
 
@@ -32,35 +24,27 @@ public class SpawnTrees : MonoBehaviour
 
     private void Start()
     {
+        FoliageState.FoliageLimits[FoliageType.Tree] = Trees;
+        FoliageState.FoliageLimits[FoliageType.Bush] = Bushes;
+        FoliageState.FoliageLimits[FoliageType.Plant] = Plants;
+        FoliageState.FoliageLimits[FoliageType.Flower] = Flowers;
+        FoliageState.FoliageLimits[FoliageType.Grass] = Grasses;
+        FoliageState.FoliageLimits[FoliageType.Log] = Logs;
+        FoliageState.FoliageLimits[FoliageType.Rock] = Rocks;
+
         StartCoroutine(PlantItems());
     }
 
     private IEnumerator PlantItems()
     {
-        while(true)
+        while (true)
         {
-            var children = transform.OfType<Transform>()
-                .Select(c => System.Enum.TryParse(c.tag, out FoliageType t) ? t : FoliageType.Other)
-                .ToArray();
-
-            var count = System.Enum.GetValues(typeof(FoliageType))
-                .OfType<FoliageType>()
-                .ToDictionary(v => v, v => children.Count(c => c == v));
-
-            for (int i = 0; i < Trees - count[FoliageType.Tree]; i++)
-                PlantItem(FoliageType.Tree);
-            for (int i = 0; i < Bushes - count[FoliageType.Bush]; i++)
-                PlantItem(FoliageType.Bush);
-            for (int i = 0; i < Plants - count[FoliageType.Plant]; i++)
-                PlantItem(FoliageType.Plant);
-            for (int i = 0; i < Flowers - count[FoliageType.Flower]; i++)
-                PlantItem(FoliageType.Flower);
-            for (int i = 0; i < Grasses - count[FoliageType.Grass]; i++)
-                PlantItem(FoliageType.Grass);
-            for (int i = 0; i < Logs - count[FoliageType.Log]; i++)
-                PlantItem(FoliageType.Log);
-            for (int i = 0; i < Rocks - count[FoliageType.Rock]; i++)
-                PlantItem(FoliageType.Rock);
+            foreach (FoliageType foliageType in System.Enum.GetValues(typeof(FoliageType)).OfType<FoliageType>()
+                .Where(t => FoliageState.FoliageCollection.ContainsKey(t)))
+            {
+                for (int i = 0; i < FoliageState.FoliageLimits[foliageType] - FoliageState.FoliageCount[foliageType]; i++)
+                    PlantItem(foliageType);
+            }
 
             yield return new WaitForSeconds(10f);
         }
@@ -79,32 +63,36 @@ public class SpawnTrees : MonoBehaviour
         Vector3 position = Tools.RandomPosition(underWater);
         Quaternion rotation = Quaternion.Euler(0, Random.Range(0, 359), 0);
 
-        IEnumerable<GameObject> foliageCollection = FoliageCollection
-                .Where(f => f.tag == category)
-                .Select(f => f.obj);
-
-        GameObject foliage = Instantiate(Tools.RandomElement(foliageCollection), position, rotation, transform);
-
-        foliage.layer = 8;
-        foliage.tag = foliage.name.Split('_')[0];
-        foliage.name = System.Guid.NewGuid().ToString();
-        foliage.isStatic = true;
-
-        var children = foliage.transform.OfType<Transform>()
-            .Select(t => t.gameObject).ToArray();
-        foreach (GameObject child in children)
+        if (Physics.OverlapSphere(position, 50f, LayerMask.GetMask("Foliage")).Length < 10)
         {
-            child.layer = 18;
-            child.tag = foliage.tag;
-            child.name = foliage.name;
-        }
+            IEnumerable<GameObject> foliageCollection = FoliageState.FoliageCollection[category];
 
-        if (!AppState.Registry.ContainsKey(foliage.name))
-            AppState.Registry.Add(foliage.name, foliage);
+            GameObject obj = Instantiate(Tools.RandomElement(foliageCollection), position, rotation, transform);
+
+            obj.layer = 8;
+            obj.tag = obj.name.Split('_')[0];
+            obj.name = System.Guid.NewGuid().ToString();
+            obj.isStatic = true;
+
+            var children = obj.transform.OfType<Transform>()
+                .Select(t => t.gameObject).ToArray();
+            foreach (GameObject child in children)
+            {
+                child.layer = 18;
+                child.tag = obj.tag;
+                child.name = obj.name;
+            }
+
+            Foliage foliage = obj.AddComponent<Foliage>();
+            foliage.FoliageType = category;
+
+            if (!AppState.Registry.ContainsKey(obj.name))
+                AppState.Registry.Add(obj.name, obj);
+        }
     }
 }
 
-enum FoliageType
+public enum FoliageType
 {
     Tree,
     Bush,

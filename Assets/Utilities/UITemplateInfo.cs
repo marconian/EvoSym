@@ -1,4 +1,5 @@
-﻿using Assets.Utilities;
+﻿using Assets.State;
+using Assets.Utilities;
 using Assets.Utilities.Model;
 using System.Collections;
 using System.Collections.Generic;
@@ -35,10 +36,10 @@ public class UITemplateInfo : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        var generations = AppState.BodyTemplates
+        var generations = AnimalState.BodyTemplates
             .Select((v, i) => (
                 template: v.Value,
-                population: AppState.Animals.Where(a => a.body.Template == v.Key &&
+                population: AnimalState.Animals.Where(a => a.body.Template == v.Key &&
                     a.stats.IsAlive).ToArray()
             ))
             .Where(v => v.population.Length > 0)
@@ -69,7 +70,7 @@ public class UITemplateInfo : MonoBehaviour
 
         TemplateInfo.text = string.Join("\n", generationTexts);
 
-        IEnumerable<string> animalTexts = AppState.Animals
+        IEnumerable<string> animalTexts = AnimalState.Animals
             .Where(v => v.stats.IsAlive)
             .OrderByDescending(v => v.stats.LifeSpan)
             .Take(10)
@@ -92,7 +93,7 @@ public class UITemplateInfo : MonoBehaviour
             SelectedInfoPanel.SetActive(true);
 
             Body selected = AppState.Selected;
-            BodyTemplate template = AppState.BodyTemplates[selected.Template.Value];
+            BodyTemplate template = AnimalState.BodyTemplates[selected.Template.Value];
             Vector3 velocity = selected.Rigidbody.velocity;
 
             SelectedInfo.text =
