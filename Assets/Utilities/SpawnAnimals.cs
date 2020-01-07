@@ -12,12 +12,23 @@ public class SpawnAnimals : MonoBehaviour
     public int IntialAnimalCount = 10;
 
     private int AnimalCount { get => transform.childCount; }
-    private GameObject Ground { get => GameObject.Find("Ground"); }
+    private GameObject Template { get; set; }
+
+    public void Awake()
+    {
+        Template = Resources.Load("AnimalBase") as GameObject;
+        Template.SetActive(false);
+    }
 
     private void Start()
     {
         StartCoroutine(CreateAnimals());
-        StartCoroutine(ClearBodyTemplates());
+        //StartCoroutine(ClearBodyTemplates());
+    }
+
+    private void OnApplicationQuit()
+    {
+        Template.SetActive(true);
     }
 
     private IEnumerator ClearBodyTemplates()
@@ -27,7 +38,6 @@ public class SpawnAnimals : MonoBehaviour
             System.Guid[] templates = AnimalState.BodyTemplates.Keys
                 .Skip(1)
                 .Where(t => AnimalState.BodyTemplates[t] != null)
-                .Take(AnimalState.BodyTemplates.Count - 10)
                 .ToArray();
             System.Guid[] activeTemplates = AnimalState.Animals
                 .Where(a => a.body.Template.HasValue)
@@ -37,8 +47,12 @@ public class SpawnAnimals : MonoBehaviour
 
             foreach(System.Guid template in templates)
             {
-                if (!activeTemplates.Contains(template))
-                    AnimalState.BodyTemplates.Remove(template);
+                Transform container = AnimalState.BodyTemplates[template].Container;
+                AnimalState.BodyTemplates.Remove(template);
+
+                ObjectCollection<Body> bodies = AnimalState.BodyCollection[template];
+                bodies.DestroyAll();
+                Destroy(container.gameObject);
             }
 
             yield return new WaitForSeconds(60f);
@@ -62,19 +76,33 @@ public class SpawnAnimals : MonoBehaviour
     private void CreateAnimal()
     {
         System.Guid template = AnimalState.BodyTemplates.Keys.First();
-        bool hydrophobic = !AnimalState.BodyTemplates[template].Template.Any(b => b.Value.Name == "Membrane");
+        BodyTemplate bodyTemplate = AnimalState.BodyTemplates[template];
+        bool hydrophobic = !bodyTemplate.Template.Any(b => b.Value.Name == "Membrane");
 
-        Vector3 position = Tools.RandomPosition(!hydrophobic);
-        Quaternion rotation = Quaternion.Euler(0, Random.Range(0, 359), 0);
+        if (Tools.TryRandomPosition(hydrophobic ? Habitat.Land : Habitat.Water, out Vector3 position))
+        {
+            Quaternion rotation = Tools.RandomRotation();
 
-        GameObject objectTemplate = Resources.Load("AnimalBase") as GameObject;
-        GameObject animal = Instantiate(objectTemplate, position, rotation, transform);
-        animal.name = System.Guid.NewGuid().ToString();
+            ObjectCollection<Body> bodies = AnimalState.BodyCollection[template];
 
-        if (animal.TryGetComponent(out Body animalBody))
-            animalBody.Template = template;
+            GameObject animal;
+            Body animalBody;
+            if (bodies.Claim(out animalBody))
+            {
+                animal = animalBody.gameObject;
+                animal.transform.position = position;
+                animal.transform.rotation = rotation;
+            }
+            else
+            {
+                animal = Instantiate(Template, position, rotation, bodyTemplate.Container);
+                animalBody = animal.GetComponent<Body>();
+                animalBody.Template = template;
 
-        if (!AppState.Registry.ContainsKey(animal.name))
-            AppState.Registry.Add(animal.name, animal);
+                bodies.Store(animalBody, true);
+            }
+
+            bodies.Use(animalBody);
+        }
     }
 }

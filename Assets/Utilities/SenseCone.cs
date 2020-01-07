@@ -16,7 +16,7 @@ namespace Assets.Utilities
     public class SenseCone : MonoBehaviour
     {
         private Body BodyRef { get => transform.parent.parent.TryGetComponent(out Body body) ? body : null; }
-        private void Start()
+        private void Awake()
         {
             if (transform.parent.TryGetComponent(out BuildingBlock block) && TryGetComponent(out MeshFilter filter))
             {

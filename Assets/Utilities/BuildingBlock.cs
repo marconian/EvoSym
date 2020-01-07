@@ -13,7 +13,7 @@ namespace Assets.Utilities
 {
     public class BuildingBlock : MonoBehaviour
     {
-        private void Start()
+        private void OnEnable()
         {
             StartCoroutine(DoSense());
         }
@@ -76,9 +76,9 @@ namespace Assets.Utilities
         private float DoSenseInterval = .5f;
         private IEnumerator DoSense()
         {
-            while (Sense > 0 || Sight > 0)
+            while (gameObject.activeSelf && Sense > 0 || Sight > 0)
             {
-                if (BodyRef != null)
+                if (BodyRef != null && BodyRef.BodyStats != null)
                 {
                     IEnumerable<SensoryData> data = new SensoryData[0];
                     if (Sense > 0)
@@ -94,12 +94,12 @@ namespace Assets.Utilities
             }
         }
 
-        private (Collider obj, Vector3 pos, float dist)[] GatherSensoryData(float distance, float view = 180f)
+        private (GameObject obj, Vector3 pos, float dist)[] GatherSensoryData(float distance, float view = 180f)
         {
-            List<(Collider obj, Vector3 pos, float dist)> results = new List<(Collider, Vector3, float)>();
+            List<(GameObject obj, Vector3 pos, float dist)> results = new List<(GameObject, Vector3, float)>();
 
             Transform body = BodyRef.transform;
-            int layerMask = LayerMask.GetMask("Foliage", "FoliageParts", "Animals", "Terrain");
+            int layerMask = LayerMask.GetMask("Foliage", "Animals", "Terrain");
 
             for (float y = -1; y <= 1; y++)
             {
@@ -110,7 +110,19 @@ namespace Assets.Utilities
                     Vector3 direction = rotation * transform.forward * distance + slope;
 
                     if (Physics.Raycast(new Ray(transform.position, direction), out RaycastHit hit, distance, layerMask))
-                        results.Add((hit.collider, body.InverseTransformPoint(hit.point), hit.distance));
+                    {
+                        GameObject obj = hit.collider.gameObject;
+
+                        if (obj.layer == 8)
+                        {
+                            while (obj != null && !obj.TryGetComponent(out Foliage foliage))
+                                obj = obj.transform.parent != null ? obj.transform.parent.gameObject : null;
+
+                        }
+
+                        if (obj != null)
+                            results.Add((obj, body.InverseTransformPoint(hit.point), hit.distance));
+                    }
 
                     Debug.DrawRay(transform.position, direction, Color.green, DoSenseInterval);
                 }
@@ -121,7 +133,7 @@ namespace Assets.Utilities
 
         private SensoryData[] ProcessSensoryData(float distance, float view = 180f)
         {
-            (Collider obj, Vector3 pos, float dist)[] found = GatherSensoryData(distance, view);
+            (GameObject obj, Vector3 pos, float dist)[] found = GatherSensoryData(distance, view);
 
             Transform body = BodyRef.transform;
             bool hydrophobic = BodyRef.BodyStats.Hydrophobic;
@@ -134,14 +146,14 @@ namespace Assets.Utilities
                 .Where(c => !hydrophobic || c.obj.transform.position.y > TerrainState.WaterLevel)
                 .Select(c => new SensoryData(body)
                 {
-                    Subject = c.obj,
+                    Subject = c.obj.gameObject,
                     Position = c.pos,
                     Distance = c.dist,
                     SensoryType = c.obj.tag == "Animal" ? SensoryType.Animal : SensoryType.Plant
                 });
             IEnumerable<SensoryData> edge = found
                 .Where(c => c.obj.tag == "Mountain")
-                .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
+                .Select(c => (obj: c.obj, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {
                     Subject = c.obj,
@@ -163,7 +175,7 @@ namespace Assets.Utilities
                 .Where(c => c.obj.tag == "Ground" &&
                     (hydrophobic && body.TransformPoint(c.pos).y < TerrainState.WaterLevel ||
                     !hydrophobic && body.TransformPoint(c.pos).y > TerrainState.WaterLevel))
-                .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
+                .Select(c => (obj: c.obj, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {
                     Subject = c.obj,
@@ -185,8 +197,16 @@ namespace Assets.Utilities
 
         private void OnTriggerEnter(Collider other)
         {
-            if (BodyRef != null && AppState.Registry.ContainsKey(other.name))
-                BodyRef.OnBlockCollision(this, AppState.Registry[other.name]);
+            GameObject obj = other.gameObject;
+            if (obj.layer == 8)
+            {
+                while (obj != null && !obj.TryGetComponent(out Foliage foliage))
+                    obj = obj.transform.parent != null ? obj.transform.parent.gameObject : null;
+
+            }
+
+            if (BodyRef != null && obj != null && AppState.Registry.ContainsKey(obj.name))
+                BodyRef.OnBlockCollision(this, AppState.Registry[obj.name].gameObject);
         }
 
         private void OnTriggerStay(Collider other)

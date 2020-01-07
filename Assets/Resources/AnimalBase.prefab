@@ -19,7 +19,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4002539875529121571
 Transform:
   m_ObjectHideFlags: 0
@@ -77,9 +77,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   UpdateTiming: 0.1
   AgingSpeed: 0.008
-  FoodConsumptionSpeed: 0.005
+  FoodConsumptionSpeed: 0.003
   OxygenConsumptionSpeed: 0.01
   WaterConsumptionSpeed: 0.001
+  ChildSpawningCost: 0.4
 --- !u!114 &8021279625926750764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -92,9 +93,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 363ec23fa6afcfd4f8cbcd987adf25cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Habitat: 0
+  Edible: 1
   AccelerationSpeed: 100
   RotationSpeed: 0.5
   AvoidObstacleSpeed: 5
   ChildSpawningDistance: 10
   HuntingTime: 10
   PopulationLimit: 50
+  HorizontalRotationLimit: 10

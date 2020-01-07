@@ -15,23 +15,33 @@ namespace Assets.State
         {
             GenerationCount = 1;
 
-            //DefaultTemplate = new BodyTemplate() { 
-            //    Diet = Diet.Herbivore,
-            //    ChildrenPerLifetime = 3
-            //};
-            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
-
             DefaultTemplate = new BodyTemplate()
             {
                 Diet = Diet.Herbivore,
-                ChildrenPerLifetime = 5
+                ChildrenPerLifetime = 3
             };
-            DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.forward * 90f);
+            DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
             DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
-            DefaultTemplate.Template.Add("Motor", new Vector3(1f, 0f, 0f), Vector3.zero);
-            DefaultTemplate.Template.Add("Bone", new Vector3(-1f, 0f, 0f), Vector3.zero);
-            DefaultTemplate.Template.Add("Eye", new Vector3(1f, 0f, -1f), Vector3.left * 180f);
+
+            //DefaultTemplate = new BodyTemplate()
+            //{
+            //    Diet = Diet.Herbivore,
+            //    ChildrenPerLifetime = 8
+            //};
+            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 1f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, 0f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Eye", new Vector3(0f, 0f, -1f), Vector3.left * 180f);
+
+            //DefaultTemplate = new BodyTemplate()
+            //{
+            //    Diet = Diet.Herbivore,
+            //    ChildrenPerLifetime = 5
+            //};
+            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.forward * 90f);
+            //DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Motor", new Vector3(1f, 0f, 0f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Bone", new Vector3(-1f, 0f, 0f), Vector3.zero);
+            //DefaultTemplate.Template.Add("Eye", new Vector3(1f, 0f, -1f), Vector3.left * 180f);
 
             BuildingBlocks = Resources.LoadAll("Blocks")
                 .OfType<GameObject>()
@@ -41,6 +51,8 @@ namespace Assets.State
 
             BodyTemplates = new Dictionary<Guid, BodyTemplate>()
                 {{ Guid.NewGuid(), DefaultTemplate }};
+            BodyCollection = new Dictionary<Guid, ObjectCollection<Body>>()
+                {{ BodyTemplates.Keys.First(), new ObjectCollection<Body>() }};
             SenseCones = new List<GameObject>();
         }
         public static List<GameObject> SenseCones { get; }
@@ -48,6 +60,7 @@ namespace Assets.State
         public static int GenerationCount { get; set; }
         public static BodyTemplate DefaultTemplate { get; }
         public static Dictionary<Guid, BodyTemplate> BodyTemplates { get; }
+        public static Dictionary<Guid, ObjectCollection<Body>> BodyCollection { get; }
         public static Dictionary<string, BuildingBlock> BuildingBlocks { get; }
 
         public static IEnumerable<(Body body, BodyStats stats)> Animals

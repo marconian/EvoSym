@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Assets.Utilities.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,24 +15,30 @@ namespace Assets.State
             var foliageResources = Resources.LoadAll("Foliage")
                 .OfType<GameObject>()
                 .Select(f => 
-                    (t: Enum.TryParse(f.name.Split('_')[0], out FoliageType t) ? t : FoliageType.Other, obj: f));
+                    (t: f.GetComponent<Foliage>().FoliageType, obj: f));
 
-            FoliageCollection = foliageResources
+            FoliageResources = foliageResources
                 .Select(r => r.t).Distinct()
                 .ToDictionary(t => t, t => foliageResources.Where(r => r.t == t)
                     .Select(r => r.obj).ToList());
             FoliageLimits = Enum.GetValues(typeof(FoliageType))
                 .OfType<FoliageType>()
-                .ToDictionary(v => v, v => 100);
+                .ToDictionary(v => v, v => 0);
+            FoliageCollection = Enum.GetValues(typeof(FoliageType))
+                .OfType<FoliageType>()
+                .ToDictionary(v => v, v => new ObjectCollection<Foliage>());
         }
 
-        public static Dictionary<FoliageType, List<GameObject>> FoliageCollection { get; }
+        public static Dictionary<FoliageType, List<GameObject>> FoliageResources { get; }
+        public static Dictionary<FoliageType, ObjectCollection<Foliage>> FoliageCollection { get; }
+
         public static IEnumerable<Foliage> Foliage
         {
-            get => AppState.Registry.Values.Where(r => r != null && r.layer == 8)
+            get => AppState.Registry.Values.Where(r => r != null && r.gameObject.layer == 8)
                 .Select(o => o.TryGetComponent(out Foliage f) ? f : null)
                 .Where(f => f != null);
         }
+        public static Dictionary<FoliageType, int> FoliageLimits { get; }
         public static Dictionary<FoliageType, int> FoliageCount
         {
             get => Enum.GetValues(typeof(FoliageType))
@@ -39,6 +46,18 @@ namespace Assets.State
                 .ToDictionary(v => v, v => Foliage
                     .Where(f => f.FoliageType == v).Count());
         }
-        public static Dictionary<FoliageType, int> FoliageLimits { get; }
+    }
+
+    public enum FoliageType
+    {
+        Tree,
+        Bush,
+        Plant,
+        Flower,
+        Grass,
+        WaterPlant,
+        Log,
+        Rock,
+        Other
     }
 }

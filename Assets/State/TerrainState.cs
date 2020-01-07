@@ -90,7 +90,7 @@ namespace Assets.State
             WaterAtPosition(new Vector3(x, 0f, z));
         public static bool WaterAtPosition(Vector3 position)
         {
-            if (WaterAtPosition(position, out RaycastHit hit))
+            if (WaterAtPosition(position, out RaycastHit _))
                 return true;
 
             return false;
@@ -99,13 +99,12 @@ namespace Assets.State
         {
             int layerMask = LayerMask.GetMask("Terrain");
             Ray ray = new Ray(new Vector3(position.x, 1000, position.z), Vector3.down);
-            if (Physics.Raycast(ray, out RaycastHit h, Mathf.Infinity, layerMask) && h.transform.name == "Water")
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask) && 
+                (hit.transform.name == "Water" || hit.transform.name == "Ground" && hit.point.y < WaterLevel))
             {
-                hit = h;
                 return true;
             }
 
-            hit = new RaycastHit();
             return false;
         }
     }

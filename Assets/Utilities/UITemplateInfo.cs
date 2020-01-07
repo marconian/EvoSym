@@ -106,6 +106,7 @@ public class UITemplateInfo : MonoBehaviour
                 $"<b><color={Hex(titleColor)}>Food</color></b> = {State(selected.BodyStats.Food, selected.BodyStats.TotalFood)} / {selected.BodyStats.TotalFood:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Water</color></b> = {State(selected.BodyStats.Water, selected.BodyStats.TotalWater)} / {selected.BodyStats.TotalWater:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Oxygen</color></b> = {State(selected.BodyStats.Oxygen, selected.BodyStats.TotalOxygen)} / {selected.BodyStats.TotalOxygen:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Life Span</color></b> = {selected.BodyStats.LifeSpan:N1} / {selected.BodyStats.TotalLifeSpan:N1}\n" +
                 $"\n" +
                 $"<b><color={Hex(titleColor)}>Food Absorbtion</color></b> = {selected.BodyStats.FoodAbsorbtion:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Water Absorbtion</color></b> = {selected.BodyStats.WaterAbsorbtion:N1}\n" +
@@ -121,11 +122,8 @@ public class UITemplateInfo : MonoBehaviour
                 $"\n" +
                 $"<b><color={Hex(titleColor)}>In Water</color></b> = {selected.BodyStats.InWater:N1}\n" +
                 $"\n" +
-                $"<b><color={Hex(titleColor)}>Life Span</color></b> = {selected.BodyStats.LifeSpan:N1}\n" +
-                $"<b><color={Hex(titleColor)}>Total Life Span</color></b> = {selected.BodyStats.TotalLifeSpan:N1}\n" +
-                $"\n" +
                 $"<b><color={Hex(titleColor)}>Child Count</color></b> = {selected.BodyStats.ChildCount:F0}\n" +
-                $"<b><color={Hex(titleColor)}>Reproduction Rate</color></b> = {selected.BodyStats.GestationPeriod:N1}\n" +
+                $"<b><color={Hex(titleColor)}>Gestation Period</color></b> = {selected.BodyStats.GestationPeriod:N1}\n" +
                 $"\n" +
                 $"<b><color={Hex(titleColor)}>Energy Storage</color></b> = {selected.BodyStats.EnergyStorage:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Sense</color></b> = {selected.BodyStats.Sense:N1}\n" +

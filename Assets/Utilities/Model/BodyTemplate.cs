@@ -14,14 +14,20 @@ namespace Assets.Utilities.Model
         {
             Generation = AnimalState.GenerationCount++;
             Template = new BlockTemplateCollection(this);
+
+            GameObject parent = GameObject.Find("Animals");
+            GameObject obj = new GameObject($"gen_{Generation}");
+            Container = obj.transform;
+            Container.parent = parent.transform;
         }
 
         public int Generation { get; }
+        public Transform Container { get; }
         public BlockTemplateCollection Template { get; }
         public Diet Diet { get; set; }
         public int ChildrenPerLifetime { get; set; } = 10;
 
-        public float MutationChance { get; set; } = .05f;
+        public float MutationChance { get; set; } = .5f;
         public float MutationNewTraitChance { get; set; } = .5f;
         public float MutationLoseTraitChance { get; set; } = .5f;
         public float MutationChangeDietChance { get; set; } = .5f;
@@ -66,7 +72,7 @@ namespace Assets.Utilities.Model
                 {
                     hasMutation = mutatedTemplate.Template.TryAddRandom();
                 }
-                else
+                else if (mutatedTemplate.Template.Count > 1)
                 {
                     BlockTemplate oldBlock = Tools.RandomElement(mutatedTemplate.Template.Values);
                     if (Random.value < oldBlock.MutationChance)
@@ -87,6 +93,8 @@ namespace Assets.Utilities.Model
                 if (hasMutation || changedDiet || changedChildren)
                 {
                     AnimalState.BodyTemplates.Add(key, mutatedTemplate);
+                    AnimalState.BodyCollection.Add(key, new ObjectCollection<Body>());
+
                     Debug.Log("Mutation occured!");
 
                     return true;

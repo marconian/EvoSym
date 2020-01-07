@@ -34,11 +34,12 @@ namespace Assets.Utilities.Model
         public float FoodConsumptionSpeed = 0.008f;
         public float OxygenConsumptionSpeed = 0.01f;
         public float WaterConsumptionSpeed = 0.001f;
+        public float ChildSpawningCost = .1f;
 
         private Body BodyRef { get; set; }
 
         public bool Awake { get; private set; }
-        public bool IsAlive { get => BodyRef != null && Food > 0 && Water > 0 && Oxygen > 0 && LifeSpan < TotalLifeSpan && transform.position.y > TerrainState.MaxDepth && transform.position.y < 100f; }
+        public bool IsAlive { get => gameObject.activeSelf && BodyRef != null && Food > 0 && Water > 0 && Oxygen > 0 && LifeSpan < TotalLifeSpan && transform.position.y > TerrainState.MaxDepth && transform.position.y < 100f; }
         public bool InWater { get => BodyRef.transform.position.y < TerrainState.WaterLevel; }
 
         private Vector3[] _blockPositions { get => BodyRef.ActiveBlocks.Select(v => v.transform.localPosition).ToArray(); }
@@ -50,8 +51,8 @@ namespace Assets.Utilities.Model
 
         public float EnergyStorage { get => BodyRef.ActiveBlocks.Sum(b => b.EnergyStorage); }
         public float OxygenAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveOxygen); }
-        public float WaterAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveWater) + 2f; }
-        public float FoodAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveFood) + 2f; }
+        public float WaterAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveWater); }
+        public float FoodAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveFood); }
         public float Sight { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSight); }
         public float Sense { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSense); }
         public float Strength { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveStrength); }
@@ -72,10 +73,10 @@ namespace Assets.Utilities.Model
 
 
         private float _lifeSpanConstant = 1f;
-        public float TotalLifeSpan { get => Mathf.CeilToInt(_lifeSpanConstant / AgingSpeed); }
+        public float TotalLifeSpan { get => Mathf.CeilToInt(_lifeSpanConstant / AgingSpeed + Strength); }
 
         public float GestationPeriod { get; private set; }
-        public bool Reproduce { get => Awake && GestationPeriod < .5f && Food / TotalFood > .8f; }
+        public bool Reproduce { get => Awake && GestationPeriod < .5f && Food / TotalFood > .7f; }
 
         private int _childCount = 0;
         public int ChildCount
@@ -83,6 +84,8 @@ namespace Assets.Utilities.Model
             get => _childCount;
             set
             {
+                _childCount = value;
+
                 int childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
                 GestationPeriod = (TotalLifeSpan - 1) / childrenPerLifetime + Random.Range(-.2f, .2f);
 
@@ -92,8 +95,10 @@ namespace Assets.Utilities.Model
                     if (minFood > GestationPeriod)
                         GestationPeriod = (TotalFood / FoodConsumptionSpeed) * AgingSpeed + 1f;
                 }
-
-                _childCount = value;
+                else
+                {
+                    _food -= TotalFood * ChildSpawningCost;
+                }
             }
         }
 
@@ -101,19 +106,19 @@ namespace Assets.Utilities.Model
         public float Food 
         {
             get => _food;
-            set => _food = _food + FoodAbsorbtion * value < TotalFood ? _food + FoodAbsorbtion * value : TotalFood;
+            set => _food = _food + FoodAbsorbtion * value + .2f < TotalFood ? _food + FoodAbsorbtion * value + .2f : TotalFood;
         }
         private float _water = Mathf.Infinity;
         public float Water
         {
             get => _water;
-            set => _water = _water + WaterAbsorbtion * value < TotalWater ? _water + WaterAbsorbtion * value : TotalWater;
+            set => _water = _water + WaterAbsorbtion * value + .1f < TotalWater ? _water + WaterAbsorbtion * value + .1f : TotalWater;
         }
         private float _oxygen = Mathf.Infinity;
         public float Oxygen
         {
             get => _oxygen;
-            set => _oxygen = _oxygen + OxygenAbsorbtion * value < TotalOxygen ? _oxygen + OxygenAbsorbtion * value : TotalOxygen;
+            set => _oxygen = _oxygen + OxygenAbsorbtion * value + .1f < TotalOxygen ? _oxygen + OxygenAbsorbtion * value + .1f : TotalOxygen;
         }
 
         public float LifeSpan { get; set; } = 0f;
@@ -134,7 +139,7 @@ namespace Assets.Utilities.Model
 
                 if (Hydrophobic && InWater || !Hydrophobic && !InWater)
                     _oxygen -= OxygenConsumptionSpeed - OxygenConsumptionSpeed * Efficiency;
-                else Oxygen = 0.1f;
+                else Oxygen = 1f;
 
                 LifeSpan += AgingSpeed;
                 GestationPeriod -= AgingSpeed;
@@ -142,8 +147,12 @@ namespace Assets.Utilities.Model
                 yield return new WaitForSeconds(UpdateTiming);
             }
 
-            AppState.Registry.Remove(BodyRef.Template.Value.ToString());
-            Destroy(gameObject);
+            Awake = false;
+            _food = Mathf.Infinity;
+            _water = Mathf.Infinity;
+            _oxygen = Mathf.Infinity;
+
+            AnimalState.BodyCollection[BodyRef.Template.Value].Store(BodyRef);
         }
     }
 }

@@ -107,8 +107,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   EnergyStorage: 0
   Oxygen: 0
-  Water: 2
-  Food: 2
+  Water: 0.1
+  Food: 0.1
   Speed: 0
   Sight: 0
   Sense: 0

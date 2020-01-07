@@ -14,12 +14,19 @@ namespace Assets.State
     {
         static AppState() 
         {
-            Registry = new Dictionary<string, GameObject>();
+            Registry = new Dictionary<string, ObjectBase>();
         }
 
         public static bool Paused { get; set; }
-        public static Dictionary<string, GameObject> Registry { get; }
+        public static Dictionary<string, ObjectBase> Registry { get; }
         public static bool SenseConesVisible { get; set; }
         public static Body Selected { get; set; }
     }
+}
+
+public enum Habitat
+{
+    Land,
+    Water,
+    All
 }

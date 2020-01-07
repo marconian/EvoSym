@@ -5,34 +5,51 @@ using System.Collections.Generic;
 using Utilities;
 using Assets.Utilities;
 using Assets.State;
+using Assets.Utilities.Model;
 
 public class SpawnTrees : MonoBehaviour
 {
+    public int FoliageCount;
+    public int SpawnOnStart;
 
-    private GameObject Ground { get => GameObject.Find("Ground"); }
+    public FoliageSetting[] Settings;
 
-    private int FoliageTotal { get => Trees + Bushes + Plants + Flowers + Grasses + Logs + Rocks; }
-    private int FoliageCount { get => transform.childCount; }
-
-    public int Trees;
-    public int Bushes;
-    public int Plants;
-    public int Flowers;
-    public int Grasses;
-    public int Logs;
-    public int Rocks;
+    private void Awake()
+    {
+        var foliageResources = Resources.LoadAll("Foliage")
+            .OfType<GameObject>();
+        foreach (var r in foliageResources)
+            r.SetActive(false);
+    }
 
     private void Start()
     {
-        FoliageState.FoliageLimits[FoliageType.Tree] = Trees;
-        FoliageState.FoliageLimits[FoliageType.Bush] = Bushes;
-        FoliageState.FoliageLimits[FoliageType.Plant] = Plants;
-        FoliageState.FoliageLimits[FoliageType.Flower] = Flowers;
-        FoliageState.FoliageLimits[FoliageType.Grass] = Grasses;
-        FoliageState.FoliageLimits[FoliageType.Log] = Logs;
-        FoliageState.FoliageLimits[FoliageType.Rock] = Rocks;
+        float sizeSum = Settings.Sum(s => s.Size);
+
+        foreach (FoliageSetting setting in Settings)
+        {
+            FoliageState.FoliageLimits[setting.Type] = Mathf.RoundToInt(FoliageCount * ((setting.Size / sizeSum) * 1f));
+            IEnumerable<GameObject> foliageResources = FoliageState.FoliageResources[setting.Type];
+            ObjectCollection<Foliage> foliageCollection = FoliageState.FoliageCollection[setting.Type];
+
+            for (int i = 0; i < FoliageState.FoliageLimits[setting.Type]; i++)
+            {
+                GameObject template = Tools.RandomElement(foliageResources);
+                GameObject obj = Instantiate(template, Vector3.zero, Quaternion.identity, transform);
+                if (obj.TryGetComponent(out Foliage foliage))
+                    foliageCollection.Store(foliage);
+            }
+        }
 
         StartCoroutine(PlantItems());
+    }
+
+    private void OnApplicationQuit()
+    {
+        var foliageResources = Resources.LoadAll("Foliage")
+            .OfType<GameObject>();
+        foreach (var r in foliageResources)
+            r.SetActive(true);
     }
 
     private IEnumerator PlantItems()
@@ -40,66 +57,41 @@ public class SpawnTrees : MonoBehaviour
         while (true)
         {
             foreach (FoliageType foliageType in System.Enum.GetValues(typeof(FoliageType)).OfType<FoliageType>()
-                .Where(t => FoliageState.FoliageCollection.ContainsKey(t)))
+                .Where(t => FoliageState.FoliageResources.ContainsKey(t)))
             {
-                for (int i = 0; i < FoliageState.FoliageLimits[foliageType] - FoliageState.FoliageCount[foliageType]; i++)
-                    PlantItem(foliageType);
+                if (FoliageState.FoliageCount[foliageType] < SpawnOnStart)
+                {
+                    int noToPlant = SpawnOnStart - FoliageState.FoliageCount[foliageType];
+                    for (int i = 0; i < noToPlant; i++)
+                        PlantItem(foliageType);
+                }
             }
 
-            yield return new WaitForSeconds(10f);
+            yield return new WaitForSeconds(60f);
         }
     }
 
     private void PlantItem(FoliageType category)
     {
-        FoliageType[] allowedUnderWater = new FoliageType[] { 
-            FoliageType.Plant,
-            FoliageType.Grass,
-            FoliageType.Log,
-            FoliageType.Rock
-        };
-
-        bool underWater = allowedUnderWater.Contains(category);
-        Vector3 position = Tools.RandomPosition(underWater);
-        Quaternion rotation = Quaternion.Euler(0, Random.Range(0, 359), 0);
-
-        if (Physics.OverlapSphere(position, 50f, LayerMask.GetMask("Foliage")).Length < 10)
+        ObjectCollection<Foliage> foliageCollection = FoliageState.FoliageCollection[category];
+        if (foliageCollection.Claim(out Foliage foliage))
         {
-            IEnumerable<GameObject> foliageCollection = FoliageState.FoliageCollection[category];
-
-            GameObject obj = Instantiate(Tools.RandomElement(foliageCollection), position, rotation, transform);
-
-            obj.layer = 8;
-            obj.tag = obj.name.Split('_')[0];
-            obj.name = System.Guid.NewGuid().ToString();
-            obj.isStatic = true;
-
-            var children = obj.transform.OfType<Transform>()
-                .Select(t => t.gameObject).ToArray();
-            foreach (GameObject child in children)
+            if (Tools.TryRandomPosition(foliage.Habitat, out Vector3 position))
             {
-                child.layer = 18;
-                child.tag = obj.tag;
-                child.name = obj.name;
+                Quaternion rotation = Tools.RandomRotation();
+
+                if (!Tools.ObjectsInRange(position, foliage.SpawnDistance, out ObjectBase[] objects) ||
+                    objects.OfType<Foliage>().Count() < 10)
+                {
+                    foliage.transform.position = position;
+                    foliage.transform.rotation = rotation;
+
+                    foliageCollection.Use(foliage);
+                    return;
+                }
             }
 
-            Foliage foliage = obj.AddComponent<Foliage>();
-            foliage.FoliageType = category;
-
-            if (!AppState.Registry.ContainsKey(obj.name))
-                AppState.Registry.Add(obj.name, obj);
+            foliageCollection.Release(foliage);
         }
     }
-}
-
-public enum FoliageType
-{
-    Tree,
-    Bush,
-    Plant,
-    Flower,
-    Grass,
-    Log,
-    Rock,
-    Other
 }

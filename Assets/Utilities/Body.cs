@@ -10,7 +10,7 @@ using Utilities;
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(BoxCollider))]
 [RequireComponent(typeof(BodyStats))]
-public class Body : MonoBehaviour
+public class Body : ObjectBase, IEatable, IAlive
 {
     public Body()
     {
@@ -21,19 +21,32 @@ public class Body : MonoBehaviour
         Food = new SensoryData[0];
     }
 
-    private void Start()
+    override protected void OnAlive()
     {
+        base.OnAlive();
+
+        Rigidbody = GetComponent<Rigidbody>();
+        Collider = GetComponent<BoxCollider>();
+
         if (Template.HasValue)
         {
-            Rigidbody = GetComponent<Rigidbody>();
-            Collider = GetComponent<BoxCollider>();
+            BodyTemplate bodyTemplate = AnimalState.BodyTemplates[Template.Value];
+            if (bodyTemplate.TryMutate(out System.Guid template))
+            {
+                ObjectCollection<Body> coll = AnimalState.BodyCollection[Template.Value];
+                coll.Extract(this);
 
-            if (AnimalState.BodyTemplates[Template.Value].TryMutate(out System.Guid template))
                 Template = template;
 
-            BuildTemplate(AnimalState.BodyTemplates[Template.Value]);
+                bodyTemplate = AnimalState.BodyTemplates[Template.Value];
+                coll = AnimalState.BodyCollection[Template.Value];
+                coll.Store(this, true);
 
-            StartCoroutine(Breathe());
+                transform.parent = bodyTemplate.Container;
+                coll.Use(this);
+            }
+
+            BuildTemplate(bodyTemplate);
         }
         else
         {
@@ -81,13 +94,9 @@ public class Body : MonoBehaviour
     public List<BuildingBlock> ActiveBlocks { get; }
     public BodyStats BodyStats { get; set; }
 
-    private IEnumerator Breathe()
+    public void Breathe()
     {
-        bool status = TryGetComponent(out BodyStats bodyStats);
-        while (!status)
-            yield return new WaitWhile(() => !TryGetComponent(out BodyStats _));
-
-        BodyStats = bodyStats;
+        BodyStats = GetComponent<BodyStats>();
         BodyStats.Wake();
 
         UpdatePhysics();
@@ -125,7 +134,7 @@ public class Body : MonoBehaviour
         {
             Food = SensoryData.Values.SelectMany(v => v)
                 .Where(v => v.Subject != null && AppState.Registry.ContainsKey(v.Subject.name))
-                .Where(v => CanEat(v.Subject))
+                .Where(v => CanEat(v.Subject, out IEatable _))
                 .OrderBy(v => v.Distance)
                 .ToArray();
 
@@ -144,7 +153,7 @@ public class Body : MonoBehaviour
         {
             Obstacles = SensoryData.Values.SelectMany(v => v)
                 .Where(d => d.Subject != null && AppState.Registry.ContainsKey(d.Subject.name))
-                .Where(d => d.Distance < 20f && !CanEat(d.Subject))
+                .Where(d => d.Distance < 20f && !CanEat(d.Subject, out IEatable _))
                 .Where(d => Mathf.Abs(Vector3.SignedAngle(Vector3.forward, d.Position, Vector3.up)) < 90f)
                 .OrderBy(d => d.Distance)
                 .ToArray();
@@ -153,24 +162,25 @@ public class Body : MonoBehaviour
         }
     }
 
-    private bool CanEat(GameObject obj)
+    private bool CanEat(GameObject obj, out IEatable eatable)
     {
         if (AppState.Registry.ContainsKey(obj.name))
         {
-            bool isAnimal = obj.TryGetComponent(out Body body);
-            switch (AnimalState.BodyTemplates[Template.Value].Diet)
+            ObjectBase objectBase = AppState.Registry[obj.name];
+            if (objectBase.Edible && objectBase is IEatable e)
             {
-                case Diet.Herbivore:
-                    return !isAnimal;
-                case Diet.Carnivore:
-                    return isAnimal;
-                case Diet.Omnivore:
-                    return !isAnimal || body.ActiveBlocks.Count < ActiveBlocks.Count;
-                default:
-                    throw new System.NotImplementedException();
+                eatable = e;
+
+                Diet diet = AnimalState.BodyTemplates[Template.Value].Diet;
+                if (objectBase is Body body && body.ActiveBlocks.Count <= ActiveBlocks.Count)
+                    return diet != Diet.Herbivore;
+                else
+                    return diet == Diet.Herbivore;
+
             }
         }
 
+        eatable = null;
         return false;
     }
 
@@ -186,8 +196,8 @@ public class Body : MonoBehaviour
             MoveFrom(obstacles);
         else if (focus?.Subject != null)
         {
-            if (focus.Distance < 3.5f)
-                Eat(focus.Subject);
+            if (focus.Distance < 1f && focus is IEatable eatable)
+                Eat(eatable);
             else
             {
                 MoveTo(focus);
@@ -229,6 +239,8 @@ public class Body : MonoBehaviour
             angles.z = upper;
         else if (angles.z < 180f && angles.z > lower)
             angles.z = lower;
+
+        transform.rotation = Quaternion.Euler(angles);
     }
 
     private void MoveTo(SensoryData data) => Move(data, to: data.Subject.transform.position);
@@ -261,13 +273,10 @@ public class Body : MonoBehaviour
         }
     }
 
-    public void OnBlockCollision(BuildingBlock block, GameObject collider)
+    public void OnBlockCollision(BuildingBlock block, GameObject obj)
     {
-        if (CanEat(collider))
-            Eat(collider);
-
-        //if (Focus != null && collider.transform == Focus)
-        //    Eat(Focus.gameObject);
+        if (CanEat(obj, out IEatable eatable))
+            Eat(eatable);
     }
 
     public void OnSensedObjects(BuildingBlock block, SensoryData[] data)
@@ -289,25 +298,14 @@ public class Body : MonoBehaviour
         Focus = null;
     }
 
-    private void Eat(GameObject obj)
+    private void Eat(IEatable eatable)
     {
         try
         {
             Focus = null;
 
-            if (obj != null)
-            {
-                if (obj.tag == "Animal")
-                {
-                    Body prey = obj.GetComponent<Body>();
-                    if (prey != null)
-                        BodyStats.Food = prey.BodyStats.EnergyStorage / 10;
-                }
-                else BodyStats.Food = 1;
-
-                AppState.Registry.Remove(obj.name);
-                Destroy(obj);
-            }
+            if (eatable != null)
+                BodyStats.Food = eatable.Devour();
         }
         catch (MissingReferenceException) { }
     }
@@ -318,41 +316,32 @@ public class Body : MonoBehaviour
         {
             if (BodyStats.Reproduce &&
                 AnimalState.Animals.Where(a => a.body.Template == Template).Count() <= PopulationLimit &&
-                (AnimalState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || !AnimalState.ReachedHerbivoreLimit))
+                (AnimalState.BodyTemplates[Template.Value].Diet == Diet.Carnivore || !AnimalState.ReachedHerbivoreLimit) &&
+                Tools.TryRandomPosition(Habitat, out Vector3 position, transform.position, ChildSpawningDistance))
             {
-                float r = ChildSpawningDistance;
-                float x = Random.Range(-r, r);
-                float z = Random.Range(-r, r);
+                ObjectCollection<Body> bodies = AnimalState.BodyCollection[Template.Value];
 
-                bool inwater = BodyStats.InWater;
-
-                int i = 0;
-                while (BodyStats.Hydrophobic ? inwater : !inwater)
+                Body childBody;
+                if (bodies.Claim(out childBody))
                 {
-                    x = Random.Range(-r, r);
-                    z = Random.Range(-r, r);
-                    inwater = TerrainState.WaterAtPosition(x, z);
+                    childBody.transform.position = position;
+                    childBody.transform.rotation = Quaternion.identity;
 
-                    i++;
-                    if (i == 100) break;
                 }
-
-                Vector3 position = transform.TransformPoint(new Vector3(x, 0f, z));
-                if (TerrainState.TryGetHeightAtPosition(position, out float y))
-                    position.y = y;
-
-                GameObject objectTemplate = Resources.Load("AnimalBase") as GameObject;
-                GameObject child = Instantiate(objectTemplate, position, Quaternion.identity, transform.parent);
-                child.name = System.Guid.NewGuid().ToString();
-
-                if (child.TryGetComponent(out Body childBody))
+                else
+                {
+                    GameObject objectTemplate = Resources.Load("AnimalBase") as GameObject;
+                    GameObject child = Instantiate(objectTemplate, position, Quaternion.identity, transform.parent);
+                    childBody = child.GetComponent<Body>();
                     childBody.Template = Template;
 
-                if (!AppState.Registry.ContainsKey(child.name))
-                    AppState.Registry.Add(child.name, child);
+                    bodies.Store(childBody, true);
+                }
+
+                bodies.Use(childBody);
 
                 Debug.Log("A child is born");
-                BodyStats.ChildCount += 1;
+                BodyStats.ChildCount++;
             }
 
             yield return new WaitUntil(() => BodyStats.Reproduce);
@@ -361,17 +350,31 @@ public class Body : MonoBehaviour
 
     private void BuildTemplate(BodyTemplate template)
     {
-        foreach(KeyValuePair<Vector3, BlockTemplate> blockDescription in template.Template)
-            CreateBlock(blockDescription.Value.Name, blockDescription.Key, blockDescription.Value.Rotation);
+        Habitat = !template.Template.Any(b => b.Value.Name == "Membrane") ? Habitat.Land : Habitat.Water;
+
+        foreach(BuildingBlock block in ActiveBlocks.ToArray())
+            block.gameObject.SetActive(false);
+
+        List<BuildingBlock> available = ActiveBlocks.ToList();
+        ActiveBlocks.Clear();
+
+        foreach (KeyValuePair<Vector3, BlockTemplate> blockDescription in template.Template)
+            CreateBlock(blockDescription.Value.Name, blockDescription.Key, blockDescription.Value.Rotation, ref available);
+
+        foreach (BuildingBlock block in available)
+            Destroy(block);
     }
 
     private void UpdatePosition()
     {
         Vector3 position = transform.position;
-        if (TerrainState.TryGetHeightAtPosition(position, out float y))
-            position.y = y + 1f;
-
+        position.y += 1f;
         transform.position = position;
+
+        Vector3 rotation = transform.rotation.eulerAngles;
+        rotation.x = 0f;
+        rotation.z = 0f;
+        transform.rotation = Quaternion.Euler(rotation);
     }
 
     private void UpdatePhysics()
@@ -398,22 +401,41 @@ public class Body : MonoBehaviour
         Collider.center = center;
     }
 
-    private BuildingBlock CreateBlock(string name, Vector3 position, Vector3 direction)
+    private BuildingBlock CreateBlock(string name, Vector3 position, Vector3 direction, ref List<BuildingBlock> available)
     {
-        if (AnimalState.BuildingBlocks.ContainsKey(name))
+        BuildingBlock block = null;
+        GameObject obj = null;
+        if (available != null && available.Any(v => v.name == name))
         {
-            GameObject gameObject = Instantiate(AnimalState.BuildingBlocks[name].gameObject, transform.TransformPoint(position), transform.rotation, transform);
-            gameObject.transform.localPosition = position;
-            gameObject.transform.localRotation = Quaternion.Euler(direction);
-            gameObject.name = name;
+            block = available.First(v => v.name == name);
+            obj = block.gameObject;
 
-            if (gameObject.TryGetComponent(out BuildingBlock block))
-            {
-                ActiveBlocks.Add(block);
-                return block;
-            }
+            available.Remove(block);
+        }
+        else if (AnimalState.BuildingBlocks.ContainsKey(name))
+        {
+            obj = Instantiate(AnimalState.BuildingBlocks[name].gameObject, transform.TransformPoint(position), transform.rotation, transform);
+            obj.name = name;
+            block = obj.GetComponent<BuildingBlock>();
+        }
+
+        if (obj != null && block != null)
+        {
+            obj.transform.localPosition = position;
+            obj.transform.localRotation = Quaternion.Euler(direction);
+
+            ActiveBlocks.Add(block);
+            obj.SetActive(true);
+
+            return block;
         }
 
         return null;
+    }
+
+    public float Devour()
+    {
+        AnimalState.BodyCollection[Template.Value].Store(this);
+        return BodyStats.EnergyStorage;
     }
 }
