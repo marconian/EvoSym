@@ -34,6 +34,8 @@ namespace Assets.Utilities.Model
         public float FoodConsumptionSpeed = 0.008f;
         public float OxygenConsumptionSpeed = 0.01f;
         public float WaterConsumptionSpeed = 0.001f;
+
+        [Range(0f, .9f)]
         public float ChildSpawningCost = .1f;
 
         private Body BodyRef { get; set; }
@@ -61,7 +63,7 @@ namespace Assets.Utilities.Model
             get
             {
                 float speed = BodyRef.ActiveBlocks.Sum(b => b.ActiveSpeed);
-                return speed > 0 ? speed + 5f : 0f;
+                return speed > 0 ? speed + 8f : 0f;
             }
         }
 
@@ -76,7 +78,7 @@ namespace Assets.Utilities.Model
         public float TotalLifeSpan { get => Mathf.CeilToInt(_lifeSpanConstant / AgingSpeed + Strength); }
 
         public float GestationPeriod { get; private set; }
-        public bool Reproduce { get => Awake && GestationPeriod < .5f && Food / TotalFood > .7f; }
+        public bool Reproduce { get => Awake && GestationPeriod <= 0f && Food / TotalFood > ChildSpawningCost + .1f; }
 
         private int _childCount = 0;
         public int ChildCount
@@ -86,17 +88,17 @@ namespace Assets.Utilities.Model
             {
                 _childCount = value;
 
-                int childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
-                GestationPeriod = (TotalLifeSpan - 1) / childrenPerLifetime + Random.Range(-.2f, .2f);
+                float minFood = (TotalFood / FoodConsumptionSpeed) * AgingSpeed + Mathf.Epsilon;
 
                 if (_childCount == 0)
                 {
-                    float minFood = (TotalFood / FoodConsumptionSpeed) * AgingSpeed;
-                    if (minFood > GestationPeriod)
-                        GestationPeriod = (TotalFood / FoodConsumptionSpeed) * AgingSpeed + 1f;
+                    GestationPeriod = minFood;
                 }
                 else
                 {
+                    int childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
+                    GestationPeriod = (TotalLifeSpan - minFood - 1) / childrenPerLifetime + Random.Range(-.1f, .1f);
+
                     _food -= TotalFood * ChildSpawningCost;
                 }
             }
@@ -152,7 +154,8 @@ namespace Assets.Utilities.Model
             _water = Mathf.Infinity;
             _oxygen = Mathf.Infinity;
 
-            AnimalState.BodyCollection[BodyRef.Template.Value].Store(BodyRef);
+            ObjectCollection<Body> coll = AnimalState.BodyCollection[BodyRef.Template.Value];
+            coll.Store(BodyRef);
         }
     }
 }

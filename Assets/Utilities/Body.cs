@@ -21,40 +21,6 @@ public class Body : ObjectBase, IEatable, IAlive
         Food = new SensoryData[0];
     }
 
-    override protected void OnAlive()
-    {
-        base.OnAlive();
-
-        Rigidbody = GetComponent<Rigidbody>();
-        Collider = GetComponent<BoxCollider>();
-
-        if (Template.HasValue)
-        {
-            BodyTemplate bodyTemplate = AnimalState.BodyTemplates[Template.Value];
-            if (bodyTemplate.TryMutate(out System.Guid template))
-            {
-                ObjectCollection<Body> coll = AnimalState.BodyCollection[Template.Value];
-                coll.Extract(this);
-
-                Template = template;
-
-                bodyTemplate = AnimalState.BodyTemplates[Template.Value];
-                coll = AnimalState.BodyCollection[Template.Value];
-                coll.Store(this, true);
-
-                transform.parent = bodyTemplate.Container;
-                coll.Use(this);
-            }
-
-            BuildTemplate(bodyTemplate);
-        }
-        else
-        {
-            Debug.LogWarning("No template found!");
-            Destroy(gameObject);
-        }
-    }
-
     public float AccelerationSpeed = 18f;
     public float RotationSpeed = .5f;
     public float AvoidObstacleSpeed = 15f;
@@ -94,18 +60,61 @@ public class Body : ObjectBase, IEatable, IAlive
     public List<BuildingBlock> ActiveBlocks { get; }
     public BodyStats BodyStats { get; set; }
 
+    override protected void OnAlive()
+    {
+        base.OnAlive();
+
+        Rigidbody = GetComponent<Rigidbody>();
+        Collider = GetComponent<BoxCollider>();
+    }
+
     public void Breathe()
     {
-        BodyStats = GetComponent<BodyStats>();
-        BodyStats.Wake();
+        if (Template.HasValue)
+        {
+            ObjectCollection<Body> coll = AnimalState.BodyCollection[Template.Value];
+            BodyTemplate bodyTemplate = AnimalState.BodyTemplates[Template.Value];
+            if (coll.Count > 1 && bodyTemplate.TryMutate(out System.Guid template))
+            {
+                coll.Extract(this);
 
-        UpdatePhysics();
-        UpdatePosition();
+                Template = template;
 
-        StartCoroutine(CheckDangers());
-        StartCoroutine(CheckObstacles());
-        StartCoroutine(CheckFood());
-        StartCoroutine(SpawnChild());
+                bodyTemplate = AnimalState.BodyTemplates[template];
+                coll = AnimalState.BodyCollection[template];
+                coll.Store(this, true, false);
+
+                transform.parent = bodyTemplate.Container;
+                coll.Use(this);
+            }
+            else
+            {
+                BuildTemplate(bodyTemplate);
+
+                BodyStats = GetComponent<BodyStats>();
+                BodyStats.Wake();
+
+                UpdatePhysics();
+                UpdatePosition();
+
+                if (gameObject.activeInHierarchy)
+                {
+                    StartCoroutine(CheckDangers());
+                    StartCoroutine(CheckObstacles());
+                    StartCoroutine(CheckFood());
+                    StartCoroutine(SpawnChild());
+                }
+                else
+                {
+
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No template found!");
+            Destroy(gameObject);
+        }
     }
 
     private IEnumerator CheckDangers()
@@ -435,7 +444,11 @@ public class Body : ObjectBase, IEatable, IAlive
 
     public float Devour()
     {
-        AnimalState.BodyCollection[Template.Value].Store(this);
+        ObjectCollection<Body> coll = AnimalState.BodyCollection[Template.Value];
+        coll.Store(this);
+
+        if (!coll.IsViable())
+            coll.DestroyAll();
         return BodyStats.EnergyStorage;
     }
 }

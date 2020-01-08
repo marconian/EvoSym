@@ -22,7 +22,7 @@ namespace Assets.Utilities.Model
         public Vector3 Position { get; }
         public Vector3 Rotation { get; }
         private BodyTemplate Template { get; }
-        public float MutationChance { get; }
+        public float MutationChance { get; set; }
 
 
         private BlockTemplateSides _sides;

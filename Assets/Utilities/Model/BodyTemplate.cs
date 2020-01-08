@@ -15,23 +15,49 @@ namespace Assets.Utilities.Model
             Generation = AnimalState.GenerationCount++;
             Template = new BlockTemplateCollection(this);
 
-            GameObject parent = GameObject.Find("Animals");
-            GameObject obj = new GameObject($"gen_{Generation}");
-            Container = obj.transform;
-            Container.parent = parent.transform;
+            ResetMutationRates();
         }
 
         public int Generation { get; }
-        public Transform Container { get; }
+
+        private Transform _container;
+        public Transform Container 
+        { 
+            get
+            {
+                if(_container == null)
+                {
+                    GameObject parent = GameObject.Find("Animals");
+                    GameObject obj = new GameObject($"gen_{Generation}");
+                    _container = obj.transform;
+                    _container.parent = parent.transform;
+                }
+
+                return _container;
+            }
+        
+        }
         public BlockTemplateCollection Template { get; }
         public Diet Diet { get; set; }
         public int ChildrenPerLifetime { get; set; } = 10;
 
-        public float MutationChance { get; set; } = .5f;
-        public float MutationNewTraitChance { get; set; } = .5f;
-        public float MutationLoseTraitChance { get; set; } = .5f;
-        public float MutationChangeDietChance { get; set; } = .5f;
-        public float MutationChangeChildrenChance { get; set; } = .5f;
+        public float MutationChance { get; set; }
+        public float MutationNewTraitChance { get; set; }
+        public float MutationLoseTraitChance { get; set; }
+        public float MutationChangeDietChance { get; set; }
+        public float MutationChangeChildrenChance { get; set; }
+
+        public void ResetMutationRates()
+        {
+            MutationChance = .5f;
+            MutationChangeChildrenChance = .5f;
+            MutationChangeDietChance = .2f;
+            MutationLoseTraitChance = .5f;
+            MutationNewTraitChance = .5f;
+
+            foreach (var block in Template)
+                block.Value.MutationChance = .9f;
+        }
 
         public bool TryMutate(out System.Guid key)
         {
@@ -90,16 +116,34 @@ namespace Assets.Utilities.Model
                     }
                 }
 
+                if (!hasMutation)
+                {
+                    mutatedTemplate.MutationLoseTraitChance *= .95f;
+                    mutatedTemplate.MutationNewTraitChance *= .95f;
+                }
+                if (!changedDiet)
+                {
+                    mutatedTemplate.MutationChangeDietChance *= .95f;
+                }
+                if (!changedChildren)
+                {
+                    mutatedTemplate.MutationChangeChildrenChance *= .95f;
+                }
+
                 if (hasMutation || changedDiet || changedChildren)
                 {
                     AnimalState.BodyTemplates.Add(key, mutatedTemplate);
                     AnimalState.BodyCollection.Add(key, new ObjectCollection<Body>());
 
-                    Debug.Log("Mutation occured!");
-
                     return true;
                 }
             }
+
+            MutationChance *= .95f;
+            MutationLoseTraitChance *= .95f;
+            MutationNewTraitChance *= .95f;
+            MutationChangeDietChance *= .95f;
+            MutationChangeChildrenChance *= .95f;
 
             return false;
         }

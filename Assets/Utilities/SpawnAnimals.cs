@@ -11,7 +11,7 @@ public class SpawnAnimals : MonoBehaviour
 {
     public int IntialAnimalCount = 10;
 
-    private int AnimalCount { get => transform.childCount; }
+    private int AnimalCount { get => AppState.Registry.Values.OfType<Body>().Count(); }
     private GameObject Template { get; set; }
 
     public void Awake()
@@ -23,7 +23,6 @@ public class SpawnAnimals : MonoBehaviour
     private void Start()
     {
         StartCoroutine(CreateAnimals());
-        //StartCoroutine(ClearBodyTemplates());
     }
 
     private void OnApplicationQuit()
@@ -33,29 +32,32 @@ public class SpawnAnimals : MonoBehaviour
 
     private IEnumerator ClearBodyTemplates()
     {
-        while(true)
+        bool doWhile = true;
+        while(doWhile)
         {
             System.Guid[] templates = AnimalState.BodyTemplates.Keys
-                .Skip(1)
-                .Where(t => AnimalState.BodyTemplates[t] != null)
                 .ToArray();
-            System.Guid[] activeTemplates = AnimalState.Animals
-                .Where(a => a.body.Template.HasValue)
-                .Select(a => a.body.Template.Value)
-                .Distinct()
+            System.Guid[] activeTemplates = AnimalState.BodyCollection
+                .Where(a => !a.Value.IsViable())
+                .Select(a => a.Key)
                 .ToArray();
 
-            foreach(System.Guid template in templates)
+            foreach(System.Guid templateId in activeTemplates)
             {
-                Transform container = AnimalState.BodyTemplates[template].Container;
-                AnimalState.BodyTemplates.Remove(template);
+                Transform container = AnimalState.BodyTemplates[templateId].Container;
+                ObjectCollection<Body> bodies = AnimalState.BodyCollection[templateId];
 
-                ObjectCollection<Body> bodies = AnimalState.BodyCollection[template];
+                AnimalState.BodyTemplates.Remove(templateId);
+                AnimalState.BodyCollection.Remove(templateId);
+
                 bodies.DestroyAll();
                 Destroy(container.gameObject);
+
             }
 
-            yield return new WaitForSeconds(60f);
+            if (AnimalCount == 0)
+                doWhile = false;
+            else yield return new WaitForSeconds(10f);
         }
     }
 
@@ -65,25 +67,41 @@ public class SpawnAnimals : MonoBehaviour
         {
             if (AnimalCount == 0)
             {
+                AnimalState.BodyTemplates.Clear();
+                AnimalState.BodyCollection.Clear();
+
+                System.Guid templateId = System.Guid.NewGuid();
+                BodyTemplate template = AnimalState.DefaultTemplate;
+                template.ResetMutationRates();
+
+                AnimalState.BodyTemplates.Add(templateId, template);
+                AnimalState.BodyCollection.Add(templateId, new ObjectCollection<Body>());
+
+                AnimalState.GenerationCount = template.Generation;
+
                 for (int i = 0; i < IntialAnimalCount; i++)
-                    CreateAnimal();
+                {
+                    CreateAnimal(templateId);
+                    template.ResetMutationRates();
+                }
+
+                StartCoroutine(ClearBodyTemplates());
             }
 
-            yield return new WaitForSeconds(30f);
+            yield return new WaitUntil(() => AnimalCount == 0);
         }
     }
 
-    private void CreateAnimal()
-    {
-        System.Guid template = AnimalState.BodyTemplates.Keys.First();
-        BodyTemplate bodyTemplate = AnimalState.BodyTemplates[template];
-        bool hydrophobic = !bodyTemplate.Template.Any(b => b.Value.Name == "Membrane");
+    private void CreateAnimal(System.Guid templateId)
+    { 
+        BodyTemplate template = AnimalState.BodyTemplates[templateId];
+        bool hydrophobic = !template.Template.Any(b => b.Value.Name == "Membrane");
 
         if (Tools.TryRandomPosition(hydrophobic ? Habitat.Land : Habitat.Water, out Vector3 position))
         {
             Quaternion rotation = Tools.RandomRotation();
 
-            ObjectCollection<Body> bodies = AnimalState.BodyCollection[template];
+            ObjectCollection<Body> bodies = AnimalState.BodyCollection[templateId];
 
             GameObject animal;
             Body animalBody;
@@ -95,9 +113,9 @@ public class SpawnAnimals : MonoBehaviour
             }
             else
             {
-                animal = Instantiate(Template, position, rotation, bodyTemplate.Container);
+                animal = Instantiate(Template, position, rotation, template.Container);
                 animalBody = animal.GetComponent<Body>();
-                animalBody.Template = template;
+                animalBody.Template = templateId;
 
                 bodies.Store(animalBody, true);
             }

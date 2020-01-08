@@ -13,7 +13,7 @@ namespace Assets.State
     {
         static AnimalState()
         {
-            GenerationCount = 1;
+            GenerationCount = 0;
 
             DefaultTemplate = new BodyTemplate()
             {
@@ -23,36 +23,14 @@ namespace Assets.State
             DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
             DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
 
-            //DefaultTemplate = new BodyTemplate()
-            //{
-            //    Diet = Diet.Herbivore,
-            //    ChildrenPerLifetime = 8
-            //};
-            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 1f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, 0f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Eye", new Vector3(0f, 0f, -1f), Vector3.left * 180f);
-
-            //DefaultTemplate = new BodyTemplate()
-            //{
-            //    Diet = Diet.Herbivore,
-            //    ChildrenPerLifetime = 5
-            //};
-            //DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.forward * 90f);
-            //DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Motor", new Vector3(1f, 0f, 0f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Bone", new Vector3(-1f, 0f, 0f), Vector3.zero);
-            //DefaultTemplate.Template.Add("Eye", new Vector3(1f, 0f, -1f), Vector3.left * 180f);
-
             BuildingBlocks = Resources.LoadAll("Blocks")
                 .OfType<GameObject>()
                 .Select(o => o.TryGetComponent(out BuildingBlock b) ? b : null)
                 .Where(b => b != null)
                 .ToDictionary(b => b.name, b => b);
 
-            BodyTemplates = new Dictionary<Guid, BodyTemplate>()
-                {{ Guid.NewGuid(), DefaultTemplate }};
-            BodyCollection = new Dictionary<Guid, ObjectCollection<Body>>()
-                {{ BodyTemplates.Keys.First(), new ObjectCollection<Body>() }};
+            BodyTemplates = new Dictionary<Guid, BodyTemplate>();
+            BodyCollection = new Dictionary<Guid, ObjectCollection<Body>>();
             SenseCones = new List<GameObject>();
         }
         public static List<GameObject> SenseCones { get; }

@@ -15,14 +15,6 @@ public class UITemplateInfo : MonoBehaviour
     public Text SelectedInfo;
     public GameObject SelectedInfoPanel;
 
-    private
-
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
-
     public Color defaultColor = Color.black;
     public Color unimportantColor = Color.gray;
     public Color titleColor = Color.black;
@@ -59,6 +51,7 @@ public class UITemplateInfo : MonoBehaviour
                 $"o={(State(v.population.Sum(p => p.stats.Oxygen != Mathf.Infinity ? p.stats.Oxygen : 0f) / v.population.Length, v.population[0].stats.TotalOxygen)):F2}; " +
                 $"a={(v.population.Sum(p => p.stats.LifeSpan) / v.population.Length):F0}; " +
                 $"c={(v.template.ChildrenPerLifetime):F0}" +
+                $"m={(v.template.MutationChance):F3}" +
                 $"</color>")
             .Union(generations.Where(v => v.population.Length < 5)
             .Select(v =>

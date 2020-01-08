@@ -14,7 +14,7 @@ namespace Utilities
             Mathf.RoundToInt(Random.Range(min, max));
         public static T RandomElement<T>(IEnumerable<T> enumerable)
         {
-            int index = Mathf.RoundToInt(Random.Range(-.499999f, (enumerable.Count() - 1) + .499999f));
+            int index = Mathf.RoundToInt(Random.Range(-.4999f, (enumerable.Count() - 1) + .4999f));
             if (index < enumerable.Count())
                 return enumerable.ElementAt(index);
 

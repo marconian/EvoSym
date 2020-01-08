@@ -64,7 +64,8 @@ namespace Assets.Utilities.Model
                             position += Vector3.back;
                             break;
                         default:
-                            throw new System.Exception();
+                            Debug.LogError("Unknown side of block!");
+                            break;
                     }
                 }
                 else
@@ -74,7 +75,7 @@ namespace Assets.Utilities.Model
                 }
             }
 
-            if (!Values.Any(b => b.Position == position))
+            if (!Values.Any() || !Values.Any(b => b.Position == position))
             {
                 Add(Tools.RandomElement(AnimalState.BuildingBlocks.Keys), position, Tools.RandomDirection());
                 return true;

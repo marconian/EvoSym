@@ -19,7 +19,7 @@ public class Foliage : ObjectBase, IEatable, IAlive
         while(gameObject.activeSelf)
         {
             PlantItem();
-            yield return new WaitForSeconds(SpawnTime + Random.Range(SpawnTime * .9f, SpawnTime * 1.1f));
+            yield return new WaitForSeconds(Random.Range(SpawnTime * .8f, SpawnTime * 1.2f));
         }
     }
 

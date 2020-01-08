@@ -23,7 +23,8 @@ namespace Assets.Utilities.Model
         private List<T> Free { get; }
         private List<T> InUse { get; }
 
-        public void Store(T item, bool claim = false)
+        private bool init = true;
+        public void Store(T item, bool claim = false, bool deactivate = true)
         {
             if (InUse.Contains(item))
                 InUse.Remove(item);
@@ -32,8 +33,10 @@ namespace Assets.Utilities.Model
             if (!claim) Free.Add(item);
             else Claimed.Add(item);
 
-            if (item.gameObject.activeSelf)
+            if (deactivate && item.gameObject.activeSelf)
                 item.gameObject.SetActive(false);
+
+            init = false;
         }
 
         public bool Claim(out T item, Func<T, bool> filter = null)
@@ -61,6 +64,9 @@ namespace Assets.Utilities.Model
         {
             Claimed.Remove(item);
             Free.Add(item);
+
+            if (item.gameObject.activeSelf)
+                item.gameObject.SetActive(false);
         }
 
         public void Use(T item)
@@ -68,7 +74,9 @@ namespace Assets.Utilities.Model
             Claimed.Remove(item);
             InUse.Add(item);
 
-            item.gameObject.SetActive(true);
+            if (!item.gameObject.activeSelf)
+                item.gameObject.SetActive(true);
+
             if (item.gameObject.activeSelf && item is IAlive alive)
                 alive.Breathe();
         }
@@ -83,9 +91,11 @@ namespace Assets.Utilities.Model
             return item;
         }
 
+        public bool IsViable() => init || Claimed.Any() || InUse.Any();
+
         public bool DestroyAll()
         {
-            if (!Claimed.Any() && !InUse.Any())
+            if (!IsViable())
             {
                 T[] items = ToArray();
                 Free.Clear();

@@ -18,7 +18,6 @@ public class ObjectBase : MonoBehaviour
     private void Awake()
     {
         name = System.Guid.NewGuid().ToString();
-        //gameObject.SetActive(false);
     }
 
     private void OnEnable()
@@ -33,6 +32,9 @@ public class ObjectBase : MonoBehaviour
     {
         if (AppState.Registry.ContainsKey(name))
             AppState.Registry.Remove(name);
+
+        if (AppState.Selected?.name == name)
+            AppState.Selected = null;
 
         OnDeath();
     }

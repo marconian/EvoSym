@@ -48,7 +48,7 @@ MonoBehaviour:
   Edible: 1
   FoliageType: 5
   SpawnsSeeds: 1
-  SpawnDistance: 0
+  SpawnDistance: 30
   SpawnTime: 10
 --- !u!1001 &8523356668851645047
 PrefabInstance:

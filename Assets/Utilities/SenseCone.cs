@@ -30,16 +30,24 @@ namespace Assets.Utilities
                     filter.sharedMesh = mesh;
             }
 
-            if (BodyRef != null && AnimalState.BodyTemplates[BodyRef.Template.Value].Diet == Diet.Carnivore)
-            {
-                var resource = Resources.Load("Blocks/Materials/SenseConeCarnivore");
-                if (TryGetComponent(out MeshRenderer renderer) && resource is Material material)
-                    renderer.sharedMaterial = material;
-            }
-            
-
             gameObject.SetActive(AppState.SenseConesVisible);
             AnimalState.SenseCones.Add(gameObject);
+        }
+
+        private void OnEnable()
+        {
+            if (BodyRef != null && TryGetComponent(out MeshRenderer renderer))
+            {
+                Diet diet = AnimalState.BodyTemplates[BodyRef.Template.Value].Diet;
+
+                UnityEngine.Object resource;
+                if (diet == Diet.Carnivore)
+                    resource = Resources.Load("Blocks/Materials/SenseConeCarnivore");
+                else resource = Resources.Load("Blocks/Materials/SenseCone");
+
+                if (resource != null && resource is Material material)
+                    renderer.sharedMaterial = material;
+            }
         }
 
         private void OnDestroy()
