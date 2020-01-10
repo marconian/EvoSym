@@ -14,6 +14,7 @@ namespace Assets.Utilities.Model
         {
             Generation = AnimalState.GenerationCount++;
             Template = new BlockTemplateCollection(this);
+            FoodCount = new Dictionary<string, int>();
 
             ResetMutationRates();
         }
@@ -39,21 +40,23 @@ namespace Assets.Utilities.Model
         }
         public BlockTemplateCollection Template { get; }
         public Diet Diet { get; set; }
+        public Dictionary<string, int> FoodCount { get; set; }
         public int ChildrenPerLifetime { get; set; } = 10;
 
-        public float MutationChance { get; set; }
-        public float MutationNewTraitChance { get; set; }
-        public float MutationLoseTraitChance { get; set; }
-        public float MutationChangeDietChance { get; set; }
-        public float MutationChangeChildrenChance { get; set; }
+        private float _mutationChance, _mutationNewTraitChance, _mutationLoseTraitChance, _mutationChangeDietChance, _mutationChangeChildrenChance;
+        public float MutationChance { get => _mutationChance; set => _mutationChance = value > .05f ? value : .05f; }
+        public float MutationNewTraitChance { get => _mutationNewTraitChance; set => _mutationNewTraitChance = value > .1f ? value : .1f; }
+        public float MutationLoseTraitChance { get => _mutationLoseTraitChance; set => _mutationLoseTraitChance = value > .1f ? value : .1f; }
+        public float MutationChangeDietChance { get => _mutationChangeDietChance; set => _mutationChangeDietChance = value > .05f ? value : .05f; }
+        public float MutationChangeChildrenChance { get => _mutationChangeChildrenChance; set => _mutationChangeChildrenChance = value > .05f ? value : .05f; }
 
         public void ResetMutationRates()
         {
-            MutationChance = .5f;
+            MutationChance = .3f;
             MutationChangeChildrenChance = .5f;
-            MutationChangeDietChance = .2f;
+            MutationChangeDietChance = .05f;
             MutationLoseTraitChance = .5f;
-            MutationNewTraitChance = .5f;
+            MutationNewTraitChance = .9f;
 
             foreach (var block in Template)
                 block.Value.MutationChance = .9f;
@@ -66,17 +69,23 @@ namespace Assets.Utilities.Model
             {
                 key = System.Guid.NewGuid();
 
-                bool changedDiet = Random.value < MutationChangeDietChance;
                 var mutatedTemplate = new BodyTemplate()
                 {
-                    Diet = changedDiet ?
-                        Tools.RandomElement(new Diet[] {
+                    Diet = Diet,
+                    ChildrenPerLifetime = ChildrenPerLifetime,
+                    FoodCount = FoodCount
+                };
+
+                bool changedDiet = false;
+                if (Random.value < MutationChangeDietChance)
+                {
+                    mutatedTemplate.Diet = Tools.RandomElement(new Diet[] {
                             Diet.Herbivore,
                             Diet.Carnivore
                             //Diet.Omnivore
-                        }.Where(d => d != Diet)) : Diet,
-                    ChildrenPerLifetime = ChildrenPerLifetime
-                };
+                        }.Where(d => d != Diet));
+                    mutatedTemplate.FoodCount.Clear();
+                }
 
                 bool changedChildren = false;
                 if (Random.value < MutationChangeChildrenChance)
@@ -116,20 +125,6 @@ namespace Assets.Utilities.Model
                     }
                 }
 
-                if (!hasMutation)
-                {
-                    mutatedTemplate.MutationLoseTraitChance *= .95f;
-                    mutatedTemplate.MutationNewTraitChance *= .95f;
-                }
-                if (!changedDiet)
-                {
-                    mutatedTemplate.MutationChangeDietChance *= .95f;
-                }
-                if (!changedChildren)
-                {
-                    mutatedTemplate.MutationChangeChildrenChance *= .95f;
-                }
-
                 if (hasMutation || changedDiet || changedChildren)
                 {
                     AnimalState.BodyTemplates.Add(key, mutatedTemplate);
@@ -139,11 +134,7 @@ namespace Assets.Utilities.Model
                 }
             }
 
-            MutationChance *= .95f;
-            MutationLoseTraitChance *= .95f;
-            MutationNewTraitChance *= .95f;
-            MutationChangeDietChance *= .95f;
-            MutationChangeChildrenChance *= .95f;
+            MutationChance *= .99f;
 
             return false;
         }

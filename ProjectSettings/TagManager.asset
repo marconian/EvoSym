@@ -20,6 +20,7 @@ TagManager:
   - SenseCone
   - Block
   - WaterPlant
+  - Soil
   layers:
   - Default
   - TransparentFX
@@ -49,10 +50,10 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
-  - 
   - Terrain
+  - Edge
+  - Soil
+  - Water
   m_SortingLayers:
   - name: Default
     uniqueID: 0

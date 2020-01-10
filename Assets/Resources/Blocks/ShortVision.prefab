@@ -92,7 +92,7 @@ GameObject:
   - component: {fileID: 5600292723950615037}
   - component: {fileID: 1581776296784078258}
   m_Layer: 0
-  m_Name: Eye
+  m_Name: ShortVision
   m_TagString: Block
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -139,7 +139,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d175f7d1a005a934b8bcc113fbc9db5b, type: 2}
+  - {fileID: 2100000, guid: 7cbb807ea7c7bdb40b4efe1fa30ba51b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -171,7 +171,7 @@ BoxCollider:
   m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1.5, y: 1.5, z: 1.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &1581776296784078258
 MonoBehaviour:
@@ -190,10 +190,13 @@ MonoBehaviour:
   Water: 0
   Food: 0
   Speed: 0
-  Sight: 30
-  Sense: 0
   Strength: 0
-  _activeSpeed: 0
+  Sense:
+    height: 4
+    width: 80
+    depth: 10
+    horizontalResolution: 6
+    verticalResolution: 1.5
 --- !u!1001 &417971650697695816
 PrefabInstance:
   m_ObjectHideFlags: 0

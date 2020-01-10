@@ -9,14 +9,14 @@ namespace Assets.State
 {
     public static class TerrainState
     {
-        private static float? _waterLevel;
+        private static GameObject _water;
         public static float WaterLevel
         {
             get
             {
-                if (!_waterLevel.HasValue)
-                    _waterLevel = GameObject.Find("Water")?.transform.position.y;
-                return _waterLevel.HasValue ? _waterLevel.Value : 0f;
+                if (_water == null)
+                    _water = GameObject.Find("Water");
+                return _water.transform.position.y;
             }
         }
 
@@ -25,7 +25,7 @@ namespace Assets.State
         {
             get
             {
-                if (!_maxDepth.HasValue && GameObject.Find("Ground").TryGetComponent(out MeshFilter filter))
+                if (!_maxDepth.HasValue && GameObject.Find("Soil").TryGetComponent(out MeshFilter filter))
                 {
                     _maxDepth = filter.mesh.vertices.Min(v => v.y) + filter.gameObject.transform.position.y;
                 }
@@ -37,7 +37,7 @@ namespace Assets.State
         {
             get
             {
-                Transform terrain = GameObject.Find("Ground").transform;
+                Transform terrain = GameObject.Find("Soil").transform;
 
                 float scaleX = terrain.lossyScale.x * 10;
                 float scaleZ = terrain.lossyScale.z * 10;
@@ -68,14 +68,9 @@ namespace Assets.State
 
         public static bool TryGetHeightAtPosition(Vector3 position, out float height)
         {
-            int layerMask = LayerMask.GetMask("Terrain");
+            int layerMask = LayerMask.GetMask("Soil");
 
-            Ray ray;
-            if (WaterAtPosition(position, out RaycastHit waterHit))
-                ray = new Ray(new Vector3(position.x, waterHit.point.y, position.z), Vector3.down);
-            else
-                ray = new Ray(new Vector3(position.x, 1000, position.z), Vector3.down);
-
+            Ray ray = new Ray(new Vector3(position.x, 1000, position.z), Vector3.down);
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, layerMask))
             {
                 height = hit.point.y;
@@ -90,20 +85,8 @@ namespace Assets.State
             WaterAtPosition(new Vector3(x, 0f, z));
         public static bool WaterAtPosition(Vector3 position)
         {
-            if (WaterAtPosition(position, out RaycastHit _))
+            if (TryGetHeightAtPosition(position, out float heigth) && heigth <= WaterLevel)
                 return true;
-
-            return false;
-        }
-        public static bool WaterAtPosition(Vector3 position, out RaycastHit hit)
-        {
-            int layerMask = LayerMask.GetMask("Terrain");
-            Ray ray = new Ray(new Vector3(position.x, 1000, position.z), Vector3.down);
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask) && 
-                (hit.transform.name == "Water" || hit.transform.name == "Ground" && hit.point.y < WaterLevel))
-            {
-                return true;
-            }
 
             return false;
         }

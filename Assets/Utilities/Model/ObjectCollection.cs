@@ -23,6 +23,8 @@ namespace Assets.Utilities.Model
         private List<T> Free { get; }
         private List<T> InUse { get; }
 
+        public int UseCount { get => InUse.Count; }
+
         private bool init = true;
         public void Store(T item, bool claim = false, bool deactivate = true)
         {

@@ -49,7 +49,7 @@ MonoBehaviour:
   FoliageType: 0
   SpawnsSeeds: 1
   SpawnDistance: 20
-  SpawnTime: 10
+  SpawnTime: 5
 --- !u!1001 &1367277306852053554
 PrefabInstance:
   m_ObjectHideFlags: 0

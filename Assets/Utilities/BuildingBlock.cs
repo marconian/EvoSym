@@ -18,15 +18,14 @@ namespace Assets.Utilities
             StartCoroutine(DoSense());
         }
 
-        public float EnergyStorage = 1f;
+        public float EnergyStorage = 0f;
 
         public float Oxygen = 0f;
         public float Water = 0f;
         public float Food = 0f;
         public float Speed = 0f;
-        public float Sight = 0f;
-        public float Sense = 0f;
         public float Strength = 0f;
+        public FieldOfView Sense = default;
 
         public float ActiveOxygen { get => Oxygen * _activeOxygen; }
         private float _activeOxygen = 1f;
@@ -34,23 +33,36 @@ namespace Assets.Utilities
         private float _activeWater = 1f;
         public float ActiveFood { get => Food * _activeFood; }
         private float _activeFood = 1f;
-        public float ActiveSight { get => Sight * _activeSight; }
+        public float ActiveSight { get => Sense.depth * _activeSight; }
         private float _activeSight = 1f;
-        public float ActiveSense { get => Sense * _activeSense; }
+        public float ActiveSense { get => Sense.depth * _activeSense; }
         private float _activeSense = 1f;
         public float ActiveStrength { get => Strength * _activeStrength; }
         private float _activeStrength = 1f;
         public float ActiveSpeed { 
             get 
             {
-                float active = _activeSpeed;
-                if (Speed > 0 && active == 0 && NeighboreBlocks.Any())
-                    active = NeighboreBlocks.Max(b => b._activeSpeed);
+                float minY = BodyRef.ActiveBlocks.Min(b => b.transform.localPosition.y);
+                float y = transform.localPosition.y;
+                float c = BodyRef.ActiveBlocks.Count(b => b.Speed > 0 && b.transform.localPosition.y == minY);
 
-                return Speed * active;
+                float baseSpeed = 8f;
+                if (c > 1) baseSpeed /= c;
+
+                if (Speed > 0)
+                {
+                    if (y == minY)
+                        _activeSpeed = Speed * 1f + baseSpeed;
+                    else if (NeighboreBlocks.Any(b => b.Speed > 0))
+                        _activeSpeed = Speed * .5f;
+                }
+                else if (Speed == 0 && y == minY)
+                    _activeSpeed = baseSpeed * -1;
+
+                return _activeSpeed;
             } 
         }
-        public float _activeSpeed = 0f;
+        private float _activeSpeed = 0f;
 
         public BoxCollider Collider { get => GetComponent<BoxCollider>(); }
         public Body BodyRef { get => GetComponentInParent<Body>(); }
@@ -76,15 +88,13 @@ namespace Assets.Utilities
         private float DoSenseInterval = .5f;
         private IEnumerator DoSense()
         {
-            while (gameObject.activeSelf && Sense > 0 || Sight > 0)
+            while (gameObject.activeSelf && Sense != default)
             {
                 if (BodyRef != null && BodyRef.BodyStats != null)
                 {
                     IEnumerable<SensoryData> data = new SensoryData[0];
-                    if (Sense > 0)
+                    if (Sense != default)
                         data = data.Union(ProcessSensoryData(Sense));
-                    if (Sight > 0)
-                        data = data.Union(ProcessSensoryData(Sight, 20f));
 
                     data = data.ToArray();
                     BodyRef.OnSensedObjects(this, data.ToArray());
@@ -94,30 +104,32 @@ namespace Assets.Utilities
             }
         }
 
-        private (GameObject obj, Vector3 pos, float dist)[] GatherSensoryData(float distance, float view = 180f)
+        private (GameObject obj, Vector3 pos, float dist)[] GatherSensoryData(FieldOfView view)
         {
             List<(GameObject obj, Vector3 pos, float dist)> results = new List<(GameObject, Vector3, float)>();
 
             Transform body = BodyRef.transform;
-            int layerMask = LayerMask.GetMask("Foliage", "Animals", "Terrain");
+            int layerMask = LayerMask.GetMask("Foliage", "Animals", "Soil", "Edge");
 
-            for (float y = -1; y <= 1; y++)
+            float horizontalStep = view.HorizontalStep;
+            float verticalStep = view.VerticalStep;
+            for (float y = -view.height; y <= view.height; y += verticalStep)
             {
                 Vector3 slope = new Vector3(0f, y, 0f);
-                for (float angle = -view; angle <= view; angle += 6)
+                for (float angle = -view.width; angle <= view.width; angle += horizontalStep)
                 {
                     Quaternion rotation = Quaternion.AngleAxis(angle, transform.up);
-                    Vector3 direction = rotation * transform.forward * distance + slope;
+                    Vector3 direction = rotation * transform.forward * view.depth + slope;
 
-                    if (Physics.Raycast(new Ray(transform.position, direction), out RaycastHit hit, distance, layerMask))
+                    if (Physics.Raycast(new Ray(transform.position, direction), out RaycastHit hit, view.depth, layerMask))
                     {
                         GameObject obj = hit.collider.gameObject;
 
-                        if (obj.layer == 8)
+                        if (obj.layer == 8 && !obj.TryGetComponent(out Foliage foliage))
                         {
-                            while (obj != null && !obj.TryGetComponent(out Foliage foliage))
+                            GameObject v = obj;
+                            while (obj != null && !obj.TryGetComponent(out foliage))
                                 obj = obj.transform.parent != null ? obj.transform.parent.gameObject : null;
-
                         }
 
                         if (obj != null)
@@ -131,9 +143,9 @@ namespace Assets.Utilities
             return results.OrderBy(d => d.dist).ToArray();
         }
 
-        private SensoryData[] ProcessSensoryData(float distance, float view = 180f)
+        private SensoryData[] ProcessSensoryData(FieldOfView view)
         {
-            (GameObject obj, Vector3 pos, float dist)[] found = GatherSensoryData(distance, view);
+            (GameObject obj, Vector3 pos, float dist)[] found = GatherSensoryData(view);
 
             Transform body = BodyRef.transform;
             bool hydrophobic = BodyRef.BodyStats.Hydrophobic;
@@ -143,7 +155,6 @@ namespace Assets.Utilities
             IEnumerable<SensoryData> objects = found
                 .Where(c => AppState.Registry.ContainsKey(c.obj.name))
                 .Select(c => (obj: AppState.Registry[c.obj.name], c.pos, c.dist))
-                .Where(c => !hydrophobic || c.obj.transform.position.y > TerrainState.WaterLevel)
                 .Select(c => new SensoryData(body)
                 {
                     Subject = c.obj.gameObject,
@@ -162,7 +173,7 @@ namespace Assets.Utilities
                     SensoryType = SensoryType.Environment
                 });
             IEnumerable<SensoryData> water = found
-                .Where(c => hydrophobic && !underwater && c.obj.tag == "Water")
+                .Where(c => c.obj.tag == "Water" && hydrophobic && !underwater && TerrainState.WaterAtPosition(c.pos))
                 .Select(c => (obj: c.obj.transform.gameObject, c.pos, c.dist))
                 .Select(c => new SensoryData(body)
                 {
@@ -172,10 +183,9 @@ namespace Assets.Utilities
                     SensoryType = SensoryType.Environment
                 });
             IEnumerable<SensoryData> environment = found
-                .Where(c => c.obj.tag == "Ground" &&
-                    (hydrophobic && body.TransformPoint(c.pos).y < TerrainState.WaterLevel ||
-                    !hydrophobic && body.TransformPoint(c.pos).y > TerrainState.WaterLevel))
-                .Select(c => (obj: c.obj, c.pos, c.dist))
+                .Where(c => c.obj.tag == "Soil" &&
+                    (hydrophobic && TerrainState.WaterAtPosition(body.TransformPoint(c.pos)) ||
+                    !hydrophobic && !TerrainState.WaterAtPosition(body.TransformPoint(c.pos))))
                 .Select(c => new SensoryData(body)
                 {
                     Subject = c.obj,
@@ -207,21 +217,6 @@ namespace Assets.Utilities
 
             if (BodyRef != null && obj != null && AppState.Registry.ContainsKey(obj.name))
                 BodyRef.OnBlockCollision(this, AppState.Registry[obj.name].gameObject);
-        }
-
-        private void OnTriggerStay(Collider other)
-        {
-            if (other.tag == "Ground")
-            {
-                if (Speed > 0 && _activeSpeed < 1f)
-                    _activeSpeed += 0.1f;
-            }
-        }
-
-        private void OnTriggerExit(Collider other)
-        {
-            //if (other.tag == "Ground")
-            //    _activeSpeed = _activeSpeed > 0 ? _activeSpeed - 0.01f : 0;
         }
     }
 }

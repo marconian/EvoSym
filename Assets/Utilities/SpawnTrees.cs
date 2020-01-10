@@ -10,7 +10,7 @@ using Assets.Utilities.Model;
 public class SpawnTrees : MonoBehaviour
 {
     public int FoliageCount;
-    public int SpawnOnStart;
+    public float SpawnOnStart;
 
     public FoliageSetting[] Settings;
 
@@ -59,9 +59,11 @@ public class SpawnTrees : MonoBehaviour
             foreach (FoliageType foliageType in System.Enum.GetValues(typeof(FoliageType)).OfType<FoliageType>()
                 .Where(t => FoliageState.FoliageResources.ContainsKey(t)))
             {
-                if (FoliageState.FoliageCount[foliageType] < SpawnOnStart)
+                var coll = FoliageState.FoliageCollection[foliageType];
+                int initialSpawn = Mathf.CeilToInt(FoliageState.FoliageLimits[foliageType] * SpawnOnStart);
+                if (coll.UseCount < initialSpawn)
                 {
-                    int noToPlant = SpawnOnStart - FoliageState.FoliageCount[foliageType];
+                    int noToPlant = initialSpawn - coll.UseCount;
                     for (int i = 0; i < noToPlant; i++)
                         PlantItem(foliageType);
                 }

@@ -26,7 +26,7 @@ public class UITemplateInfo : MonoBehaviour
         $"<color={Hex(current / total < .1f ? dangerColor : current / total < .3f ? warningColor : defaultColor)}>{current:N1}</color>";
 
     // Update is called once per frame
-    void FixedUpdate()
+    private void Update()
     {
         var generations = AnimalState.BodyTemplates
             .Select((v, i) => (
@@ -45,8 +45,7 @@ public class UITemplateInfo : MonoBehaviour
                 $"Size = {v.template.Template.Count}\n" +
                 $"  - e={v.population[0].stats.EnergyStorage:F1}; " +
                 $"sp={v.population[0].stats.Speed:F1}; " +
-                $"s0={v.population[0].stats.Sense:F1}; " +
-                $"s1={v.population[0].stats.Sight:F1}\n" +
+                $"ss={v.population[0].stats.Sense:F1}\n" +
                 $"  - f={(State(v.population.Sum(p => p.stats.Food != Mathf.Infinity ? p.stats.Food : 0f) / v.population.Length, v.population[0].stats.TotalFood)):F2}; " +
                 $"o={(State(v.population.Sum(p => p.stats.Oxygen != Mathf.Infinity ? p.stats.Oxygen : 0f) / v.population.Length, v.population[0].stats.TotalOxygen)):F2}; " +
                 $"a={(v.population.Sum(p => p.stats.LifeSpan) / v.population.Length):F0}; " +
@@ -120,7 +119,6 @@ public class UITemplateInfo : MonoBehaviour
                 $"\n" +
                 $"<b><color={Hex(titleColor)}>Energy Storage</color></b> = {selected.BodyStats.EnergyStorage:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Sense</color></b> = {selected.BodyStats.Sense:N1}\n" +
-                $"<b><color={Hex(titleColor)}>Sight</color></b> = {selected.BodyStats.Sight:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Speed</color></b> = {selected.BodyStats.Speed:N1}\n" +
                 $"<b><color={Hex(titleColor)}>Strength</color></b> = {selected.BodyStats.Strength:N1}" +
                 $"</color>";

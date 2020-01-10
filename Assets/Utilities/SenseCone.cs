@@ -21,10 +21,8 @@ namespace Assets.Utilities
             if (transform.parent.TryGetComponent(out BuildingBlock block) && TryGetComponent(out MeshFilter filter))
             {
                 Mesh mesh = null;
-                if (block.Sense > 0)
+                if (block.Sense != default)
                     mesh = GetSensoryfieldCone(block.Sense);
-                else if (block.Sight > 0)
-                    mesh = GetSensoryfieldCone(block.Sight, 20f);
 
                 if (mesh != null)
                     filter.sharedMesh = mesh;
@@ -55,7 +53,7 @@ namespace Assets.Utilities
             AnimalState.SenseCones.Remove(gameObject);
         }
 
-        public Mesh GetSensoryfieldCone(float distance, float view = 180f)
+        public Mesh GetSensoryfieldCone(FieldOfView view)
         {
             Mesh mesh = new Mesh();
 
@@ -63,13 +61,14 @@ namespace Assets.Utilities
             List<Vector3> verticesBottom = new List<Vector3>();
 
             int angles = 0;
-            for (float angle = -view; angle <= view; angle += 6)
+            float step = view.HorizontalStep;
+            for (float angle = -view.width; angle <= view.width; angle += step)
             {
                 Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
-                Vector3 direction = rotation * Vector3.forward * distance;
+                Vector3 direction = rotation * Vector3.forward * view.depth;
 
-                verticesTop.Add(direction + new Vector3(0f, 1, 0f));
-                verticesBottom.Add(direction + new Vector3(0f, -1, 0f));
+                verticesTop.Add(direction + new Vector3(0f, view.height, 0f));
+                verticesBottom.Add(direction + new Vector3(0f, -view.height, 0f));
 
                 angles++;
             }
@@ -90,7 +89,7 @@ namespace Assets.Utilities
 
             foreach ((int a, int b) in idx.Select((v, i) => (v, idx.ElementAt(i < idx.Count() - 1 ? i + 1 : 0))))
             {
-                if (!(view == 180f && (a == 1 && b == l || a == l && b == 1)))
+                if (!(view.width == 180f && (a == 1 && b == l || a == l && b == 1)))
                 {
                     triangles.Add(0);
                     triangles.Add(a);

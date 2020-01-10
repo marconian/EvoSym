@@ -21,7 +21,7 @@ namespace Utilities
             return default;
         }
 
-        private static GameObject Ground { get => GameObject.Find("Ground"); }
+        private static GameObject Ground { get => GameObject.Find("Soil"); }
 
         public static bool TryRandomPosition(Habitat habitat, out Vector3 position, Vector3 center = default, float radius = 100f)
         {

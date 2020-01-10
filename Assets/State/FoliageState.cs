@@ -34,18 +34,9 @@ namespace Assets.State
 
         public static IEnumerable<Foliage> Foliage
         {
-            get => AppState.Registry.Values.Where(r => r != null && r.gameObject.layer == 8)
-                .Select(o => o.TryGetComponent(out Foliage f) ? f : null)
-                .Where(f => f != null);
+            get => AppState.Registry.Values.OfType<Foliage>();
         }
         public static Dictionary<FoliageType, int> FoliageLimits { get; }
-        public static Dictionary<FoliageType, int> FoliageCount
-        {
-            get => Enum.GetValues(typeof(FoliageType))
-                .OfType<FoliageType>()
-                .ToDictionary(v => v, v => Foliage
-                    .Where(f => f.FoliageType == v).Count());
-        }
     }
 
     public enum FoliageType

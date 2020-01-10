@@ -9,7 +9,10 @@ using Assets.State;
 
 public class SpawnAnimals : MonoBehaviour
 {
-    public int IntialAnimalCount = 10;
+    public int InitialAnimalCount = 10;
+
+    [Range(0f, 1f)]
+    public float InitialMutationChance;
 
     private int AnimalCount { get => AppState.Registry.Values.OfType<Body>().Count(); }
     private GameObject Template { get; set; }
@@ -72,18 +75,21 @@ public class SpawnAnimals : MonoBehaviour
 
                 System.Guid templateId = System.Guid.NewGuid();
                 BodyTemplate template = AnimalState.DefaultTemplate;
-                template.ResetMutationRates();
 
                 AnimalState.BodyTemplates.Add(templateId, template);
                 AnimalState.BodyCollection.Add(templateId, new ObjectCollection<Body>());
 
                 AnimalState.GenerationCount = template.Generation;
 
-                for (int i = 0; i < IntialAnimalCount; i++)
+                for (int i = 0; i < InitialAnimalCount; i++)
                 {
-                    CreateAnimal(templateId);
                     template.ResetMutationRates();
+                    template.MutationChance = InitialMutationChance;
+                    if (template.TryMutate(out System.Guid key))
+                        CreateAnimal(key);
                 }
+
+                template.ResetMutationRates();
 
                 StartCoroutine(ClearBodyTemplates());
             }

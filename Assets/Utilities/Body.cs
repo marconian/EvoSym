@@ -104,10 +104,6 @@ public class Body : ObjectBase, IEatable, IAlive
                     StartCoroutine(CheckFood());
                     StartCoroutine(SpawnChild());
                 }
-                else
-                {
-
-                }
             }
         }
         else
@@ -141,10 +137,21 @@ public class Body : ObjectBase, IEatable, IAlive
     {
         while (BodyStats.IsAlive)
         {
+            Dictionary<string, int> foodCount = AnimalState.BodyTemplates[Template.Value].FoodCount;
             Food = SensoryData.Values.SelectMany(v => v)
-                .Where(v => v.Subject != null && AppState.Registry.ContainsKey(v.Subject.name))
-                .Where(v => CanEat(v.Subject, out IEatable _))
-                .OrderBy(v => v.Distance)
+                .Where(v => v.Subject != null && AppState.Registry.ContainsKey(v.Subject.name) && CanEat(v.Subject, out IEatable _))
+                .OrderByDescending(v =>
+                {
+                    ObjectBase obj = AppState.Registry[v.Subject.name];
+                    string tag = "unknown";
+                    if (obj is Foliage foliage)
+                        tag = foliage.FoliageType.ToString();
+                    else if (obj is Body body)
+                        tag = body.Template.Value.ToString();
+
+                    return foodCount.ContainsKey(tag) ? foodCount[tag] : 0;
+                })
+                .ThenBy(v => v.Distance)
                 .ToArray();
 
             if (Focus?.Subject == null && Food.Any())
@@ -175,17 +182,26 @@ public class Body : ObjectBase, IEatable, IAlive
     {
         if (AppState.Registry.ContainsKey(obj.name))
         {
-            ObjectBase objectBase = AppState.Registry[obj.name];
-            if (objectBase.Edible && objectBase is IEatable e)
+            bool hydrophobic = BodyStats.Hydrophobic;
+            if (hydrophobic && obj.transform.position.y > TerrainState.WaterLevel ||
+                    !hydrophobic && obj.transform.position.y < TerrainState.WaterLevel)
             {
-                eatable = e;
+                ObjectBase objectBase = AppState.Registry[obj.name];
+                if (objectBase.Edible && objectBase is IEatable e)
+                {
+                    eatable = e;
 
-                Diet diet = AnimalState.BodyTemplates[Template.Value].Diet;
-                if (objectBase is Body body && body.ActiveBlocks.Count <= ActiveBlocks.Count)
-                    return diet != Diet.Herbivore;
-                else
-                    return diet == Diet.Herbivore;
-
+                    Diet diet = AnimalState.BodyTemplates[Template.Value].Diet;
+                    if (diet != Diet.Carnivore && objectBase is Foliage foliage)
+                    {
+                        return true; // BodyStats.Height >= foliage.Height * .5f;
+                    }
+                    else if (diet != Diet.Herbivore && objectBase is Body body)
+                    {
+                        if (body.Template != Template && body.ActiveBlocks.Count <= ActiveBlocks.Count)
+                            return true;
+                    }
+                }
             }
         }
 
@@ -205,7 +221,7 @@ public class Body : ObjectBase, IEatable, IAlive
             MoveFrom(obstacles);
         else if (focus?.Subject != null)
         {
-            if (focus.Distance < 1f && focus is IEatable eatable)
+            if (focus.Distance < 2f && focus is IEatable eatable)
                 Eat(eatable);
             else
             {
@@ -314,7 +330,20 @@ public class Body : ObjectBase, IEatable, IAlive
             Focus = null;
 
             if (eatable != null)
+            {
                 BodyStats.Food = eatable.Devour();
+
+                string tag = "unknown";
+                if (eatable is Foliage foliage)
+                    tag = foliage.FoliageType.ToString();
+                else if (eatable is Body body)
+                    tag = body.Template.Value.ToString();
+
+                BodyTemplate template = AnimalState.BodyTemplates[Template.Value];
+                if (!template.FoodCount.ContainsKey(tag))
+                    template.FoodCount.Add(tag, 1);
+                else template.FoodCount[tag]++;
+            }
         }
         catch (MissingReferenceException) { }
     }

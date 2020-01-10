@@ -15,14 +15,33 @@ namespace Assets.Utilities.Model
         {
             BodyRef = GetComponent<Body>();
 
-            Width = (_blockPositions.Max(v => v.x) + 1) - _blockPositions.Min(v => v.x);
-            Height = (_blockPositions.Max(v => v.y) + 1) - _blockPositions.Min(v => v.y);
-            Depth = (_blockPositions.Max(v => v.z) + 1) - _blockPositions.Min(v => v.z);
+            BlockPositions = BodyRef.ActiveBlocks.Select(v => v.transform.localPosition).ToArray();
+            Width = (BlockPositions.Max(v => v.x) + 1) - BlockPositions.Min(v => v.x);
+            Height = (BlockPositions.Max(v => v.y) + 1) - BlockPositions.Min(v => v.y);
+            Depth = (BlockPositions.Max(v => v.z) + 1) - BlockPositions.Min(v => v.z);
 
             Efficiency = BodyRef.ActiveBlocks
                 .Sum(b => 0.01f * b.NeighboreBlocks.Count());
 
-            _lifeSpanConstant = Random.Range(.05f, .2f);
+            EnergyStorage = BodyRef.ActiveBlocks.Sum(b => b.EnergyStorage) + MinimalEnergyStorage;
+            OxygenAbsorbtion = BodyRef.ActiveBlocks.Sum(b => b.ActiveOxygen);
+            WaterAbsorbtion = BodyRef.ActiveBlocks.Sum(b => b.ActiveWater);
+            FoodAbsorbtion = BodyRef.ActiveBlocks.Sum(b => b.ActiveFood);
+            Sense = BodyRef.ActiveBlocks.Sum(b => b.ActiveSense);
+            Strength = BodyRef.ActiveBlocks.Sum(b => b.ActiveStrength);
+            Speed = BodyRef.ActiveBlocks.Sum(b => b.ActiveSpeed);
+            if (Speed < 0)
+                Speed = 0;
+
+            Hydrophobic = OxygenAbsorbtion == 0;
+
+            TotalFood = EnergyStorage;
+            TotalWater = 1f;
+            TotalOxygen = 1f;
+            TotalLifeSpan = Mathf.CeilToInt(Random.Range(.01f, .05f) / AgingSpeed + Strength);
+
+            FoodPerHeartBeat = FoodConsumptionSpeed * BodyRef.ActiveBlocks.Count - (FoodConsumptionSpeed * BodyRef.ActiveBlocks.Count) * Efficiency;
+
             ChildCount = 0;
             Awake = true;
 
@@ -34,6 +53,7 @@ namespace Assets.Utilities.Model
         public float FoodConsumptionSpeed = 0.008f;
         public float OxygenConsumptionSpeed = 0.01f;
         public float WaterConsumptionSpeed = 0.001f;
+        public float MinimalEnergyStorage = 2f;
 
         [Range(0f, .9f)]
         public float ChildSpawningCost = .1f;
@@ -42,43 +62,33 @@ namespace Assets.Utilities.Model
 
         public bool Awake { get; private set; }
         public bool IsAlive { get => gameObject.activeSelf && BodyRef != null && Food > 0 && Water > 0 && Oxygen > 0 && LifeSpan < TotalLifeSpan && transform.position.y > TerrainState.MaxDepth && transform.position.y < 100f; }
-        public bool InWater { get => BodyRef.transform.position.y < TerrainState.WaterLevel; }
+        public bool InWater { get => BodyRef.ActiveBlocks.Min(b => b.transform.position.y) < TerrainState.WaterLevel; }
 
-        private Vector3[] _blockPositions { get => BodyRef.ActiveBlocks.Select(v => v.transform.localPosition).ToArray(); }
+        private Vector3[] BlockPositions { get; set; }
         private float Efficiency { get; set; }
 
         public float Width { get; private set; }
         public float Height { get; private set; }
         public float Depth { get; private set; }
 
-        public float EnergyStorage { get => BodyRef.ActiveBlocks.Sum(b => b.EnergyStorage); }
-        public float OxygenAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveOxygen); }
-        public float WaterAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveWater); }
-        public float FoodAbsorbtion { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveFood); }
-        public float Sight { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSight); }
-        public float Sense { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveSense); }
-        public float Strength { get => BodyRef.ActiveBlocks.Sum(b => b.ActiveStrength); }
-        public float Speed
-        {
-            get
-            {
-                float speed = BodyRef.ActiveBlocks.Sum(b => b.ActiveSpeed);
-                return speed > 0 ? speed + 8f : 0f;
-            }
-        }
+        public float EnergyStorage { get; private set; }
+        public float OxygenAbsorbtion { get; private set; }
+        public float WaterAbsorbtion { get; private set; }
+        public float FoodAbsorbtion { get; private set; }
+        public float Sense { get; private set; }
+        public float Strength { get; private set; }
+        public float Speed { get; private set; }
 
-        public float TotalFood { get => EnergyStorage + 1f; }
-        public float TotalWater { get => EnergyStorage; }
-        public float TotalOxygen { get => EnergyStorage; }
+        public float TotalFood { get; private set; }
+        public float TotalWater { get; private set; }
+        public float TotalOxygen { get; private set; }
 
-        public bool Hydrophobic { get => OxygenAbsorbtion == 0; }
+        public bool Hydrophobic { get; private set; }
 
-
-        private float _lifeSpanConstant = 1f;
-        public float TotalLifeSpan { get => Mathf.CeilToInt(_lifeSpanConstant / AgingSpeed + Strength); }
+        public float TotalLifeSpan { get; private set; }
 
         public float GestationPeriod { get; private set; }
-        public bool Reproduce { get => Awake && GestationPeriod <= 0f && Food / TotalFood > ChildSpawningCost + .1f; }
+        public bool Reproduce { get => Awake && GestationPeriod <= 0f && Food + .1f > BodyRef.ActiveBlocks.Count * ChildSpawningCost; }
 
         private int _childCount = 0;
         public int ChildCount
@@ -88,18 +98,21 @@ namespace Assets.Utilities.Model
             {
                 _childCount = value;
 
-                float minFood = (TotalFood / FoodConsumptionSpeed) * AgingSpeed + Mathf.Epsilon;
+                float minFood = Mathf.FloorToInt(MinimalEnergyStorage / FoodPerHeartBeat);
 
                 if (_childCount == 0)
                 {
-                    GestationPeriod = minFood;
+                    GestationPeriod = minFood * AgingSpeed;
                 }
                 else
                 {
-                    int childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
-                    GestationPeriod = (TotalLifeSpan - minFood - 1) / childrenPerLifetime + Random.Range(-.1f, .1f);
+                    float childrenPerLifetime = AnimalState.BodyTemplates[BodyRef.Template.Value].ChildrenPerLifetime;
+                    float stepsPerLifetime = Mathf.FloorToInt(TotalLifeSpan / AgingSpeed);
+                    float stepsPerChild = Mathf.FloorToInt((stepsPerLifetime - minFood) / childrenPerLifetime);
 
-                    _food -= TotalFood * ChildSpawningCost;
+                    GestationPeriod = stepsPerChild * AgingSpeed + Random.Range(-.1f, .1f);
+
+                    _food -= BodyRef.ActiveBlocks.Count * ChildSpawningCost;
                 }
             }
         }
@@ -125,18 +138,20 @@ namespace Assets.Utilities.Model
 
         public float LifeSpan { get; set; } = 0f;
 
+        private float FoodPerHeartBeat { get; set; }
+
         public IEnumerator HeartBeat()
         {
             while (IsAlive)
             {
                 if (_food == Mathf.Infinity)
-                    _food = TotalFood;
+                    _food = MinimalEnergyStorage;
                 if (_water == Mathf.Infinity)
                     _water = TotalWater;
                 if (_oxygen == Mathf.Infinity)
                     _oxygen = TotalOxygen;
 
-                _food -= FoodConsumptionSpeed - FoodConsumptionSpeed * Efficiency;
+                _food -= FoodPerHeartBeat;
                 //_water -= WaterConsumptionSpeed - WaterConsumptionSpeed * Efficiency;
 
                 if (Hydrophobic && InWater || !Hydrophobic && !InWater)

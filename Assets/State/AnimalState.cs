@@ -18,10 +18,10 @@ namespace Assets.State
             DefaultTemplate = new BodyTemplate()
             {
                 Diet = Diet.Herbivore,
-                ChildrenPerLifetime = 3
+                ChildrenPerLifetime = 8
             };
-            DefaultTemplate.Template.Add("Feeling", new Vector3(0f, 0f, 0f), Vector3.zero);
-            DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, -1f), Vector3.zero);
+            DefaultTemplate.Template.Add("ShortVision", new Vector3(0f, 1f, 0f), Vector3.zero);
+            DefaultTemplate.Template.Add("Motor", new Vector3(0f, 0f, 0f), Vector3.zero);
 
             BuildingBlocks = Resources.LoadAll("Blocks")
                 .OfType<GameObject>()

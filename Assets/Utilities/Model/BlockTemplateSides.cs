@@ -22,23 +22,24 @@ namespace Assets.Utilities.Model
             Left = neighboreBlocks.FirstOrDefault(r => r == position + Vector3.left);
             Front = neighboreBlocks.FirstOrDefault(r => r == position + Vector3.forward);
             Back = neighboreBlocks.FirstOrDefault(r => r == position + Vector3.back);
+
             FreeSides = new bool[]
             {
-                Top == Vector3.zero,
-                Bottom == Vector3.zero,
-                Right == Vector3.zero,
-                Left == Vector3.zero,
-                Front == Vector3.zero,
-                Back == Vector3.zero
+                !neighboreBlocks.Any(r => r == position + Vector3.up),
+                !neighboreBlocks.Any(r => r == position + Vector3.down),
+                !neighboreBlocks.Any(r => r == position + Vector3.right),
+                !neighboreBlocks.Any(r => r == position + Vector3.left),
+                !neighboreBlocks.Any(r => r == position + Vector3.forward),
+                !neighboreBlocks.Any(r => r == position + Vector3.back)
             };
         }
 
-        public Vector3? Top { get; private set; }
-        public Vector3? Bottom { get; private set; }
-        public Vector3? Right { get; private set; }
-        public Vector3? Left { get; private set; }
-        public Vector3? Front { get; private set; }
-        public Vector3? Back { get; private set; }
+        public Vector3 Top { get; private set; }
+        public Vector3 Bottom { get; private set; }
+        public Vector3 Right { get; private set; }
+        public Vector3 Left { get; private set; }
+        public Vector3 Front { get; private set; }
+        public Vector3 Back { get; private set; }
 
         public bool[] FreeSides { get; private set; }
 
